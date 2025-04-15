@@ -1,8 +1,10 @@
 import openpyxl
 import sys
 import json
-from main import get_excel_values
 from pathlib import Path
+import os
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+from xslx_value_picker.cli import get_excel_values
 import subprocess
 
 def create_sample_excel(path):
@@ -93,9 +95,22 @@ values:
     config_path.write_text(config, encoding="utf-8")
     # 出力ファイル指定
     output_path = tmp_path / "result.json"
+    print("config_path:", config_path.resolve())
+    print("output_path:", output_path.resolve())
+    print("tmp_path files before:", list(tmp_path.iterdir()))
+
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(Path(__file__).parent.parent / "src")
     result = subprocess.run([
-        sys.executable, "main.py", "--config", str(config_path), "--output", str(output_path)
-    ], cwd=Path(__file__).parent, capture_output=True, encoding="utf-8")
+        "uv", "run", "python", "-m", "xslx_value_picker",
+        "--config", str(config_path.resolve()),
+        "--output", str(output_path.resolve())
+    ], cwd=tmp_path, capture_output=True, encoding="utf-8", env=env)
+
+    print("stdout:", result.stdout)
+    print("stderr:", result.stderr)
+    print("tmp_path files after:", list(tmp_path.iterdir()))
+    print("returncode:", result.returncode)
     assert output_path.exists()
     with open(output_path, encoding="utf-8") as f:
         data = json.load(f)
@@ -103,8 +118,12 @@ values:
     assert data["value2"] == "abc"
     # 標準出力（--output未指定）
     result = subprocess.run([
-        sys.executable, "main.py", "--config", str(config_path)
-    ], cwd=Path(__file__).parent, capture_output=True, encoding="utf-8")
+        "uv", "run", "python", "-m", "xslx_value_picker",
+        "--config", str(config_path.resolve())
+    ], cwd=tmp_path, capture_output=True, encoding="utf-8", env=env)
+    print("stdout (no output):", result.stdout)
+    print("stderr (no output):", result.stderr)
+    print("returncode (no output):", result.returncode)
     # 出力をJSONとしてパースし値を比較
     stdout_json = json.loads(result.stdout)
     assert stdout_json["value1"] == 123

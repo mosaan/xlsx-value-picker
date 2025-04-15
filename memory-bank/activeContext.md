@@ -1,49 +1,33 @@
 # activeContext.md
 
 ## 現在の作業フォーカス
-- Memory Bankの初期作成
-- プロジェクト要件・設計・技術文書の整備
-- main.pyの`--output`未指定時は標準出力に出力する仕様追加・README反映
+- 配布・開発・テスト・CI/CDを一貫した構成にリファクタリング
+- main.pyをsrc/xslx_value_picker/cli.pyへ移動し、__main__.py追加でパッケージ化
+- pyproject.tomlで[project.scripts]にCLIコマンド（xslx-value-picker）を登録
+- READMEにuv/pipインストール例、uv run xslx-value-picker実行例、YAML出力例を追記
+- .gitignore強化、LICENSE（MIT）追加、test/配下にテスト・サンプル整理
+- CI（GitHub Actions）でpytest自動実行を追加
+- テストのサブプロセス呼び出しはuv run python -m xslx_value_picker ...に統一し、PYTHONPATH=srcを付与することで仮想環境へインストールせずに開発中コードをテスト可能にした
+- すべてのテストがパスすることを確認
 
 ## 直近の変更
-- Memory Bankコアファイルの新規作成
-- main.pyでExcelファイルパスを位置引数（第一引数）で指定できるように変更
-- get_excel_values関数のpytestテスト（test_main.py）を作成し、正常動作を確認
-- テストフレームワークpytestを開発用依存として`uv add pytest --dev`で導入
-- テスト実行は`uv run pytest`で行う運用に統一
-- シート指定で`*N`（例: `*2`）と記載した場合、左からN番目（1始まり）のシートを選択できる機能をmain.pyに実装
-- READMEに`*N`指定の使い方・例を追記
-- `*N`指定のテストケース追加（test_main.pyにて*1, *2でのシート値取得を検証）
-- テスト全件パスを確認
-- main.pyの`--output`未指定時は標準出力に出力する仕様に修正
-- READMEのコマンド例・説明を修正
-- 名前付きセル(named_cell)指定によるExcel値取得に対応（main.py, test_main.py, READMEを修正）
-- openpyxlのdefined_names.addによる名前付きセルの追加方法に修正
-- subprocessのencoding指定でテスト時のUnicodeDecodeError警告を解消
-- すべてのテストが警告なしでパスすることを確認
+- main.pyのYAML出力対応・堅牢化
+- src/ディレクトリ化・パッケージ化・エントリポイント整理
+- pyproject.tomlの配布用設定・CLIスクリプト登録
+- README・.gitignore・LICENSE・CI・テスト整理
+- テストはPYTHONPATH=srcでuv run python -m ...方式で安定動作
 
-## 次のステップ（完了したら削除）
-- main.pyのさらなる堅牢化（例: エラー処理やYAML出力対応）
-- ドキュメント（READMEやサンプル）整備
-- 必要に応じて追加テストやCI連携
+## 次のステップ
+- ドキュメント・サンプルのさらなる充実
 - ユーザーからの追加要望・フィードバック対応
 
 ## アクティブな意思決定・考慮事項
-- openpyxlのdata_onlyモードを利用
-- uv addによるパッケージ管理徹底
-- Memory Bankドキュメント駆動開発を徹底
-- テストはpytest＋uv run pytestで実施
-- Excel式セルの値取得はopenpyxlの仕様（保存時のみ値が埋まる）に依存
-- `*N`記法はExcelの仕様上シート名と競合しないため安全
-- シート数を超える・0以下の指定はエラーとして明示的に処理
-- `--output`未指定時は標準出力に出力することでCLIツールとしての柔軟性を向上
-- YAML出力は未対応。現状はJSONのみ。今後の拡張予定。
-- main.pyのCLI引数仕様（--output, --include-empty-range-row等）を明確化。
-- ファイル未指定・未存在・不正なシート/セル指定時のエラー処理（明示的なエラー出力・sys.exit）を徹底。
+- src/xslx_value_picker/配下に実装を集約し、パッケージとして配布可能な構成
+- CLIコマンドは[project.scripts]で登録し、uv/pipインストール後にxslx-value-pickerで実行可能
+- テストはPYTHONPATH=srcでsrc配下の最新コードを直接参照
+- サブプロセスでのCLIテストもuv run python -m ... + PYTHONPATH指定で仮想環境汚染なし
+- CI/CDはGitHub Actionsでpytestを自動実行
 
 ## 学び・インサイト
-- Memory Bankを活用したドキュメント駆動開発の重要性
-- uvのdev依存・テスト実行フローの明文化で開発効率・再現性が向上
-- シート順指定はユーザー利便性向上に有効
-- ドキュメント・実装の一貫性維持が重要
-- CLIツールは標準出力対応でスクリプト連携性が高まる
+- 仮想環境にインストールせずPYTHONPATHでsrc配下を参照することで、開発効率・テスト独立性・CI一貫性が向上
+- ドキュメント・実装・テストの一貫性維持が重要

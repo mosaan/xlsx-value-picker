@@ -148,6 +148,32 @@ values:
 }
 ```
 
+## インストール方法
+
+### uv経由
+```
+uv pip install .
+```
+
+### pip経由
+```
+pip install .
+```
+
+## コマンド実行例
+
+### CLIコマンド
+```
+xslx-value-picker --config config.yaml --output result.json
+```
+
+### モジュール実行
+```
+python -m xslx_value_picker --config config.yaml --output result.yaml --format yaml
+```
+
+--formatオプションでjson/yaml出力を切り替え可能です。
+
 ---
 
 ## 開発者向けガイド
