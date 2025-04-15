@@ -1,7 +1,11 @@
 import openpyxl
 import pytest
 import os
+import sys
+import json
 from main import get_excel_values
+from pathlib import Path
+import subprocess
 
 def create_sample_excel(path):
     wb = openpyxl.Workbook()
@@ -37,3 +41,38 @@ def test_get_excel_values_sheet_index(tmp_path):
     result = get_excel_values(str(excel_path), value_specs)
     assert result["value1"] == 123
     assert result["value2"] == "abc"
+
+def test_main_output_file_and_stdout(tmp_path):
+    # Excelファイルと設定ファイルを作成
+    excel_path = tmp_path / "sample.xlsx"
+    create_sample_excel(excel_path)
+    config_path = tmp_path / "config.yaml"
+    config = f"""\
+excel_file: {excel_path}
+values:
+  - sheet: Sheet1
+    cell: A1
+    name: value1
+  - sheet: Sheet2
+    cell: C3
+    name: value2
+"""
+    config_path.write_text(config, encoding="utf-8")
+    # 出力ファイル指定
+    output_path = tmp_path / "result.json"
+    result = subprocess.run([
+        sys.executable, "main.py", "--config", str(config_path), "--output", str(output_path)
+    ], cwd=Path(__file__).parent, capture_output=True, text=True)
+    assert output_path.exists()
+    with open(output_path, encoding="utf-8") as f:
+        data = json.load(f)
+    assert data["value1"] == 123
+    assert data["value2"] == "abc"
+    # 標準出力（--output未指定）
+    result = subprocess.run([
+        sys.executable, "main.py", "--config", str(config_path)
+    ], cwd=Path(__file__).parent, capture_output=True, text=True)
+    # 出力をJSONとしてパースし値を比較
+    stdout_json = json.loads(result.stdout)
+    assert stdout_json["value1"] == 123
+    assert stdout_json["value2"] == "abc"

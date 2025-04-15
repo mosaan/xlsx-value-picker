@@ -36,7 +36,7 @@ def main():
     parser = argparse.ArgumentParser(description='Excel値取得ツール')
     parser.add_argument('excel', nargs='?', help='Excelファイルパス（コマンドライン優先）')
     parser.add_argument('-c', '--config', default='config.yaml', help='設定ファイルパス')
-    parser.add_argument('-o', '--output', default='output.json', help='出力ファイルパス')
+    parser.add_argument('-o', '--output', help='出力ファイルパス（未指定時は標準出力）')
     args = parser.parse_args()
 
     config = load_config(args.config)
@@ -52,9 +52,13 @@ def main():
 
     results = get_excel_values(excel_file, value_specs)
 
-    with open(args.output, 'w', encoding='utf-8') as f:
-        json.dump(results, f, ensure_ascii=False, indent=2)
-    print(f'出力完了: {args.output}')
+    if args.output:
+        with open(args.output, 'w', encoding='utf-8') as f:
+            json.dump(results, f, ensure_ascii=False, indent=2)
+        print(f'出力完了: {args.output}')
+    else:
+        json.dump(results, sys.stdout, ensure_ascii=False, indent=2)
+        print()  # 改行
 
 if __name__ == '__main__':
     main()

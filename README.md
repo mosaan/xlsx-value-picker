@@ -28,7 +28,11 @@
      ```
      uv run python main.py --config config.yaml --output result.json
      ```
-   - `--config` で設定ファイル、`--output` で出力ファイル名を指定します。
+     または（出力ファイルを指定しない場合、標準出力にJSONが出力されます）:
+     ```
+     uv run python main.py --config config.yaml
+     ```
+   - `--config` で設定ファイル、`--output` で出力ファイル名を指定します。`--output`を省略すると標準出力に出力されます。
 
 3. **出力例**
    ```json
@@ -73,6 +77,10 @@
 - コマンド例:
   ```
   uv run python main.py --config config.yaml --output result.json
+  ```
+  または
+  ```
+  uv run python main.py --config config.yaml
   ```
 
 ### テスト
