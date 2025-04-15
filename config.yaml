@@ -1,0 +1,13 @@
+# サンプル設定ファイル: config.yaml
+# 取得したいExcelファイル・セル情報と保存名を列挙
+excel_file: sample.xlsx
+values:
+  - sheet: Sheet1
+    cell: A1
+    name: value1
+  - sheet: Sheet1
+    cell: B2
+    name: value2
+  - sheet: Sheet2
+    cell: C3
+    name: value3
