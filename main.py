@@ -14,8 +14,20 @@ def load_config(config_path):
 def get_excel_values(excel_path, value_specs):
     wb = openpyxl.load_workbook(excel_path, data_only=True)
     results = {}
+    sheetnames = wb.sheetnames
     for spec in value_specs:
-        sheet = wb[spec['sheet']]
+        sheet_spec = spec['sheet']
+        if isinstance(sheet_spec, str) and sheet_spec.startswith('*'):
+            # シート名が'*N'形式の場合、左からN番目のシートを選択
+            try:
+                idx = int(sheet_spec[1:]) - 1
+                if idx < 0 or idx >= len(sheetnames):
+                    raise IndexError
+                sheet = wb[sheetnames[idx]]
+            except (ValueError, IndexError):
+                raise ValueError(f"シート指定が不正です: {sheet_spec} (シート数: {len(sheetnames)})")
+        else:
+            sheet = wb[sheet_spec]
         value = sheet[spec['cell']].value
         results[spec['name']] = value
     return results

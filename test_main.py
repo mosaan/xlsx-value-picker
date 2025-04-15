@@ -26,3 +26,14 @@ def test_get_excel_values(tmp_path):
     # openpyxlの仕様上、式セルの値はNoneになる
     assert result["value2"] is None
     assert result["value3"] == "abc"
+
+def test_get_excel_values_sheet_index(tmp_path):
+    excel_path = tmp_path / "sample.xlsx"
+    create_sample_excel(excel_path)
+    value_specs = [
+        {"sheet": "*1", "cell": "A1", "name": "value1"},  # Sheet1
+        {"sheet": "*2", "cell": "C3", "name": "value2"},  # Sheet2
+    ]
+    result = get_excel_values(str(excel_path), value_specs)
+    assert result["value1"] == 123
+    assert result["value2"] == "abc"

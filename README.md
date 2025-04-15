@@ -13,13 +13,15 @@
      ```yaml
      file: "sample.xlsx"
      values:
-       - sheet: "Sheet1"
+       - sheet: "Sheet1"   # シート名で指定
          cell: "B2"
          name: "total_price"
-       - sheet: "Sheet2"
+       - sheet: "*2"       # 左から2番目のシートを指定
          cell: "C5"
          name: "user_count"
      ```
+   - `sheet`に`*N`（例: `*2`）と指定すると、左からN番目（1始まり）のシートを選択できます。
+   - シート名に`*`はExcelの仕様上使えないため、この記法と競合しません。
 
 2. **コマンドの実行**
    - コマンド例:
