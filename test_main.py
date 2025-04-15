@@ -1,6 +1,4 @@
 import openpyxl
-import pytest
-import os
 import sys
 import json
 from main import get_excel_values
@@ -62,7 +60,7 @@ values:
     output_path = tmp_path / "result.json"
     result = subprocess.run([
         sys.executable, "main.py", "--config", str(config_path), "--output", str(output_path)
-    ], cwd=Path(__file__).parent, capture_output=True, text=True)
+    ], cwd=Path(__file__).parent, capture_output=True, encoding="utf-8")
     assert output_path.exists()
     with open(output_path, encoding="utf-8") as f:
         data = json.load(f)
@@ -71,8 +69,25 @@ values:
     # 標準出力（--output未指定）
     result = subprocess.run([
         sys.executable, "main.py", "--config", str(config_path)
-    ], cwd=Path(__file__).parent, capture_output=True, text=True)
+    ], cwd=Path(__file__).parent, capture_output=True, encoding="utf-8")
     # 出力をJSONとしてパースし値を比較
     stdout_json = json.loads(result.stdout)
     assert stdout_json["value1"] == 123
     assert stdout_json["value2"] == "abc"
+
+def test_get_excel_values_named_cell(tmp_path):
+    excel_path = tmp_path / "sample.xlsx"
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Sheet1"
+    ws['A1'] = 999
+    # 名前付きセルを新APIで追加（openpyxl 3.1以降推奨）
+    from openpyxl.workbook.defined_name import DefinedName
+    dn = DefinedName('MY_CELL', attr_text=f"'{ws.title}'!$A$1")
+    wb.defined_names.add(dn)
+    wb.save(excel_path)
+    value_specs = [
+        {"named_cell": "MY_CELL", "name": "foo"},
+    ]
+    result = get_excel_values(str(excel_path), value_specs)
+    assert result["foo"] == 999

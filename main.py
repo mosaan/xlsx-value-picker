@@ -16,20 +16,35 @@ def get_excel_values(excel_path, value_specs):
     results = {}
     sheetnames = wb.sheetnames
     for spec in value_specs:
-        sheet_spec = spec['sheet']
-        if isinstance(sheet_spec, str) and sheet_spec.startswith('*'):
-            # シート名が'*N'形式の場合、左からN番目のシートを選択
-            try:
-                idx = int(sheet_spec[1:]) - 1
-                if idx < 0 or idx >= len(sheetnames):
-                    raise IndexError
-                sheet = wb[sheetnames[idx]]
-            except (ValueError, IndexError):
-                raise ValueError(f"シート指定が不正です: {sheet_spec} (シート数: {len(sheetnames)})")
+        if 'named_cell' in spec:
+            # 名前付きセル優先
+            name = spec['named_cell']
+            dn = wb.defined_names.get(name)
+            if dn is None:
+                raise ValueError(f"名前付きセルが見つかりません: {name}")
+            # 参照先（シート名, セルアドレス）を取得
+            dest = list(dn.destinations)
+            if not dest:
+                raise ValueError(f"名前付きセルの参照先が不正です: {name}")
+            sheet_name, cell_addr = dest[0]
+            sheet = wb[sheet_name]
+            value = sheet[cell_addr].value
+            results[spec['name']] = value
         else:
-            sheet = wb[sheet_spec]
-        value = sheet[spec['cell']].value
-        results[spec['name']] = value
+            sheet_spec = spec['sheet']
+            if isinstance(sheet_spec, str) and sheet_spec.startswith('*'):
+                # シート名が'*N'形式の場合、左からN番目のシートを選択
+                try:
+                    idx = int(sheet_spec[1:]) - 1
+                    if idx < 0 or idx >= len(sheetnames):
+                        raise IndexError
+                    sheet = wb[sheetnames[idx]]
+                except (ValueError, IndexError):
+                    raise ValueError(f"シート指定が不正です: {sheet_spec} (シート数: {len(sheetnames)})")
+            else:
+                sheet = wb[sheet_spec]
+            value = sheet[spec['cell']].value
+            results[spec['name']] = value
     return results
 
 def main():

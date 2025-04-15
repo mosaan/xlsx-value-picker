@@ -17,6 +17,10 @@
 - テスト全件パスを確認
 - main.pyの`--output`未指定時は標準出力に出力する仕様に修正
 - READMEのコマンド例・説明を修正
+- 名前付きセル(named_cell)指定によるExcel値取得に対応（main.py, test_main.py, READMEを修正）
+- openpyxlのdefined_names.addによる名前付きセルの追加方法に修正
+- subprocessのencoding指定でテスト時のUnicodeDecodeError警告を解消
+- すべてのテストが警告なしでパスすることを確認
 
 ## 次のステップ（完了したら削除）
 - main.pyのさらなる堅牢化（例: エラー処理やYAML出力対応）
