@@ -22,14 +22,18 @@ def get_excel_values(excel_path, value_specs):
 
 def main():
     parser = argparse.ArgumentParser(description='Excel値取得ツール')
+    parser.add_argument('excel', nargs='?', help='Excelファイルパス（コマンドライン優先）')
     parser.add_argument('-c', '--config', default='config.yaml', help='設定ファイルパス')
     parser.add_argument('-o', '--output', default='output.json', help='出力ファイルパス')
     args = parser.parse_args()
 
     config = load_config(args.config)
-    excel_file = config['excel_file']
+    excel_file = args.excel if args.excel else config.get('excel_file')
     value_specs = config['values']
 
+    if not excel_file:
+        print('Excelファイルが指定されていません（コマンドラインまたは設定ファイルで指定してください）', file=sys.stderr)
+        sys.exit(1)
     if not Path(excel_file).exists():
         print(f'Excelファイルが見つかりません: {excel_file}', file=sys.stderr)
         sys.exit(1)

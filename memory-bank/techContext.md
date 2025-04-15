@@ -18,3 +18,10 @@
 ## ツール利用パターン
 - uv initで初期化、uv addでパッケージ追加
 - main.pyに実装を集約
+
+## テスト・開発用依存
+- テストフレームワーク: pytest
+- 開発用依存として `uv add pytest --dev` で導入
+- 本番環境には含まれず、開発・CI用途でのみ利用
+- テスト実行は `uv run pytest` で行う（仮想環境の有効化不要）
+- テスト例: test_main.pyでget_excel_values関数の単体テストを実装
