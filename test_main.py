@@ -40,6 +40,16 @@ def create_sample_excel_with_range(path):
     ws.append([12, 22, 32])
     wb.save(path)
 
+def create_sample_excel_with_empty_rows(path):
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Sheet1"
+    ws.append(["col1", "col2", "col3"])  # ヘッダ行
+    ws.append([1, 2, 3])
+    ws.append([None, None, None])  # 全列Noneの行
+    ws.append([4, 5, 6])
+    wb.save(path)
+
 def test_get_excel_values(tmp_path):
     excel_path = tmp_path / "sample.xlsx"
     create_sample_excel(excel_path)
@@ -141,4 +151,24 @@ def test_get_excel_values_range(tmp_path):
         {"a": 10, "c": 30},
         {"a": 11, "c": 31},
         {"a": 12, "c": 32},
+    ]
+
+def test_get_excel_values_range_skip_and_include_empty(tmp_path):
+    excel_path = tmp_path / "emptyrow.xlsx"
+    create_sample_excel_with_empty_rows(excel_path)
+    value_specs = [
+        {"range": "Sheet1!A2:C4", "columns": {"1": "a", "2": "b", "3": "c"}, "name": "range_data"}
+    ]
+    # デフォルト（空行スキップ）
+    result = get_excel_values(str(excel_path), value_specs)
+    assert result["range_data"] == [
+        {"a": 1, "b": 2, "c": 3},
+        {"a": 4, "b": 5, "c": 6},
+    ]
+    # include_empty_range_row=True で空行も含める
+    result2 = get_excel_values(str(excel_path), value_specs, include_empty_range_row=True)
+    assert result2["range_data"] == [
+        {"a": 1, "b": 2, "c": 3},
+        {"a": None, "b": None, "c": None},
+        {"a": 4, "b": 5, "c": 6},
     ]

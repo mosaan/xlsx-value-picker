@@ -36,7 +36,7 @@ def extract_table_records(ws, table_name, columns_map):
         records.append(rec)
     return records
 
-def extract_range_records(ws, cell_range, columns_map):
+def extract_range_records(ws, cell_range, columns_map, include_empty_row=False):
     # セル範囲からデータ部分のみ抽出（ヘッダ行含まない前提）
     min_col, min_row, max_col, max_row = openpyxl.utils.range_boundaries(cell_range)
     records = []
@@ -46,10 +46,13 @@ def extract_range_records(ws, cell_range, columns_map):
             col_pos = int(col_pos_str)
             idx = col_pos - 1  # 1始まり→0始まり
             rec[out_key] = row[idx]
+        # すべての値がNoneの場合はスキップ（デフォルト）
+        if not include_empty_row and all(v is None for v in rec.values()):
+            continue
         records.append(rec)
     return records
 
-def get_excel_values(excel_path, value_specs):
+def get_excel_values(excel_path, value_specs, include_empty_range_row=False):
     wb = openpyxl.load_workbook(excel_path, data_only=True)
     results = {}
     sheetnames = wb.sheetnames
@@ -78,7 +81,7 @@ def get_excel_values(excel_path, value_specs):
             else:
                 ws = wb.active
                 cell_range = range_str
-            records = extract_range_records(ws, cell_range, columns_map)
+            records = extract_range_records(ws, cell_range, columns_map, include_empty_row=include_empty_range_row)
             results[spec.get('name', range_str)] = records
         elif 'named_cell' in spec:
             # 名前付きセル優先
@@ -116,6 +119,7 @@ def main():
     parser.add_argument('excel', nargs='?', help='Excelファイルパス（コマンドライン優先）')
     parser.add_argument('-c', '--config', default='config.yaml', help='設定ファイルパス')
     parser.add_argument('-o', '--output', help='出力ファイルパス（未指定時は標準出力）')
+    parser.add_argument('--include-empty-range-row', action='store_true', help='range指定で全列がNoneの行も出力に含める')
     args = parser.parse_args()
 
     config = load_config(args.config)
@@ -129,7 +133,7 @@ def main():
         print(f'Excelファイルが見つかりません: {excel_file}', file=sys.stderr)
         sys.exit(1)
 
-    results = get_excel_values(excel_file, value_specs)
+    results = get_excel_values(excel_file, value_specs, include_empty_range_row=args.include_empty_range_row)
 
     if args.output:
         with open(args.output, 'w', encoding='utf-8') as f:
