@@ -35,7 +35,9 @@
      ```
      uv run python main.py --config config.yaml
      ```
-   - `--config` で設定ファイル、`--output` で出力ファイル名を指定します。`--output`を省略すると標準出力に出力されます。
+   - `--config` で設定ファイル、`--output` で出力ファイル名を指定します。
+   - `--output`を省略すると標準出力に出力されます。
+   - `--config`を省略した場合は、カレントディレクトリの`config.yaml`が自動的に使用されます。
    - **range指定時の空行（全列None）スキップについて**: デフォルトでは、rangeで指定した範囲内の「すべての列がNoneの行」は出力に含まれません。すべての列がNoneの行も出力したい場合は、`--include-empty-range-row`オプションを指定してください。
 
 3. **出力例**
