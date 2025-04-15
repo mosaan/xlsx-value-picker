@@ -11,12 +11,76 @@ def load_config(config_path):
     with open(config_path, 'r', encoding='utf-8') as f:
         return yaml.safe_load(f)
 
+def extract_table_records(ws, table_name, columns_map):
+    # openpyxlのテーブル取得
+    table = None
+    for t in ws._tables.values():
+        if t.name == table_name:
+            table = t
+            break
+    if table is None:
+        raise ValueError(f"テーブルが見つかりません: {table_name}")
+    # Table.refはstr型（例: 'A1:C4'）なのでrange_boundariesで座標取得
+    min_col, min_row, max_col, max_row = openpyxl.utils.range_boundaries(table.ref)
+    # ヘッダ行取得
+    header_row = ws.iter_rows(min_row=min_row, max_row=min_row, min_col=min_col, max_col=max_col, values_only=True)
+    headers = next(header_row)
+    col_idx_map = {h: i for i, h in enumerate(headers)}
+    records = []
+    for row in ws.iter_rows(min_row=min_row+1, max_row=max_row, min_col=min_col, max_col=max_col, values_only=True):
+        rec = {}
+        for excel_col, out_key in columns_map.items():
+            if excel_col not in col_idx_map:
+                raise ValueError(f"テーブル列が見つかりません: {excel_col}")
+            rec[out_key] = row[col_idx_map[excel_col]]
+        records.append(rec)
+    return records
+
+def extract_range_records(ws, cell_range, columns_map):
+    # セル範囲からデータ部分のみ抽出（ヘッダ行含まない前提）
+    min_col, min_row, max_col, max_row = openpyxl.utils.range_boundaries(cell_range)
+    records = []
+    for row in ws.iter_rows(min_row=min_row, max_row=max_row, min_col=min_col, max_col=max_col, values_only=True):
+        rec = {}
+        for col_pos_str, out_key in columns_map.items():
+            col_pos = int(col_pos_str)
+            idx = col_pos - 1  # 1始まり→0始まり
+            rec[out_key] = row[idx]
+        records.append(rec)
+    return records
+
 def get_excel_values(excel_path, value_specs):
     wb = openpyxl.load_workbook(excel_path, data_only=True)
     results = {}
     sheetnames = wb.sheetnames
     for spec in value_specs:
-        if 'named_cell' in spec:
+        if 'table' in spec:
+            # テーブル指定
+            table_name = spec['table']
+            columns_map = spec['columns']
+            # テーブルは全シートから探索
+            found = False
+            for ws in wb.worksheets:
+                if table_name in ws.tables:
+                    records = extract_table_records(ws, table_name, columns_map)
+                    results[spec.get('name', table_name)] = records
+                    found = True
+                    break
+            if not found:
+                raise ValueError(f"テーブルが見つかりません: {table_name}")
+        elif 'range' in spec:
+            # 範囲指定
+            range_str = spec['range']
+            columns_map = spec['columns']
+            if '!' in range_str:
+                sheet_name, cell_range = range_str.split('!', 1)
+                ws = wb[sheet_name]
+            else:
+                ws = wb.active
+                cell_range = range_str
+            records = extract_range_records(ws, cell_range, columns_map)
+            results[spec.get('name', range_str)] = records
+        elif 'named_cell' in spec:
             # 名前付きセル優先
             name = spec['named_cell']
             dn = wb.defined_names.get(name)

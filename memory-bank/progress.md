@@ -30,3 +30,4 @@
 - uv addによるパッケージ管理を徹底する方針に決定
 - テストフレームワークpytestを`uv add pytest --dev`で導入し、`uv run pytest`で実行する運用に決定
 - main.pyの`--output`未指定時は標準出力に出力する仕様に変更し、READMEも反映
+- Excelテーブル（ListObject）機能対応はopenpyxlを採用する方針に決定

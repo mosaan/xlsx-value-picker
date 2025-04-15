@@ -49,6 +49,100 @@
 - Excelファイルは事前に保存し、計算済みの値を取得してください（関数セルも値として取得されます）。
 - 設定ファイルの書式が正しいことを確認してください。
 
+## 設定ファイル例
+
+```yaml
+excel_file: sample_all.xlsx
+values:
+  # シート名で指定し、A1セルの値をvalue1として取得
+  - sheet: Sheet1
+    cell: A1
+    name: value1
+  # 左から2番目のシート（Sheet2）を指定し、B2セルの値をvalue2として取得
+  - sheet: "*2"
+    cell: B2
+    name: value2
+  # 名前付きセル（MY_CELL、Sheet1!A1）をnamedとして取得
+  - named_cell: MY_CELL
+    name: named
+  # TableSheet上のTable1テーブルから、列名→出力キー名でマッピングして複数行をtable_dataとして取得
+  - table: Table1
+    columns:
+      商品ID: id      # 商品ID列→id
+      商品名: name    # 商品名列→name
+      点数: score    # 点数列→score
+    name: table_data
+  # RangeSheetのA2:C4範囲（ヘッダ行除く）から、1列目→a、3列目→cとして複数行をrange_dataとして取得
+  - range: RangeSheet!A2:C4
+    columns:
+      1: a           # 左端の列（A列）→a
+      3: c           # 3番目の列（C列）→c
+    name: range_data
+```
+
+## サンプルデータ内容
+- Sheet1: A1=りんご
+- Sheet2: B2=バナナ
+- 名前付きセル: Sheet1!A1（りんご）
+- TableSheet: 商品ID/商品名/点数（みかん/ぶどう/もも等、日本語）
+- RangeSheet: さくらんぼ/すいか/メロン など日本語果物名
+
+## 出力例（JSON）
+
+```json
+{
+  "value1": "りんご",
+  "value2": "バナナ",
+  "named": "りんご",
+  "table_data": [
+    {"id": 1, "name": "みかん", "score": 90},
+    {"id": 2, "name": "ぶどう", "score": 80},
+    {"id": 3, "name": "もも", "score": 70}
+  ],
+  "range_data": [
+    {"a": "さくらんぼ", "c": "メロン"},
+    {"a": "いちご", "c": "パイナップル"},
+    {"a": "キウイ", "c": "マンゴー"}
+  ]
+}
+```
+
+## テーブル・範囲指定による複数レコード抽出の例
+
+### 設定ファイル例（YAML）
+
+```yaml
+excel_file: sample.xlsx
+values:
+  - table: Table1
+    columns:
+      ID: id
+      Score: score
+    name: table_data
+  - range: Sheet1!A2:C4
+    columns:
+      1: a
+      3: c
+    name: range_data
+```
+
+### 出力例（JSON）
+
+```json
+{
+  "table_data": [
+    {"id": 1, "score": 90},
+    {"id": 2, "score": 80},
+    {"id": 3, "score": 70}
+  ],
+  "range_data": [
+    {"a": 10, "c": 30},
+    {"a": 11, "c": 31},
+    {"a": 12, "c": 32}
+  ]
+}
+```
+
 ---
 
 ## 開発者向けガイド

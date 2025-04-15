@@ -15,6 +15,31 @@ def create_sample_excel(path):
     ws2['C3'] = "abc"
     wb.save(path)
 
+def create_sample_excel_with_table(path):
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Sheet1"
+    ws.append(["ID", "Name", "Score"])
+    ws.append([1, "Alice", 90])
+    ws.append([2, "Bob", 80])
+    ws.append([3, "Carol", 70])
+    from openpyxl.worksheet.table import Table, TableStyleInfo
+    tab = Table(displayName="Table1", ref="A1:C4")
+    style = TableStyleInfo(name="TableStyleMedium9", showRowStripes=True)
+    tab.tableStyleInfo = style
+    ws.add_table(tab)
+    wb.save(path)
+
+def create_sample_excel_with_range(path):
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Sheet1"
+    ws.append(["dummy1", "dummy2", "dummy3"])  # ヘッダ行（使わない）
+    ws.append([10, 20, 30])
+    ws.append([11, 21, 31])
+    ws.append([12, 22, 32])
+    wb.save(path)
+
 def test_get_excel_values(tmp_path):
     excel_path = tmp_path / "sample.xlsx"
     create_sample_excel(excel_path)
@@ -91,3 +116,29 @@ def test_get_excel_values_named_cell(tmp_path):
     ]
     result = get_excel_values(str(excel_path), value_specs)
     assert result["foo"] == 999
+
+def test_get_excel_values_table(tmp_path):
+    excel_path = tmp_path / "table.xlsx"
+    create_sample_excel_with_table(excel_path)
+    value_specs = [
+        {"table": "Table1", "columns": {"ID": "id", "Score": "score"}, "name": "table_data"}
+    ]
+    result = get_excel_values(str(excel_path), value_specs)
+    assert result["table_data"] == [
+        {"id": 1, "score": 90},
+        {"id": 2, "score": 80},
+        {"id": 3, "score": 70},
+    ]
+
+def test_get_excel_values_range(tmp_path):
+    excel_path = tmp_path / "range.xlsx"
+    create_sample_excel_with_range(excel_path)
+    value_specs = [
+        {"range": "Sheet1!A2:C4", "columns": {"1": "a", "3": "c"}, "name": "range_data"}
+    ]
+    result = get_excel_values(str(excel_path), value_specs)
+    assert result["range_data"] == [
+        {"a": 10, "c": 30},
+        {"a": 11, "c": 31},
+        {"a": 12, "c": 32},
+    ]
