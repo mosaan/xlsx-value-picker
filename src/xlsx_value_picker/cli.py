@@ -123,6 +123,9 @@ def main():
     parser.add_argument('--format', choices=['json', 'yaml'], default='json', help='出力フォーマット（jsonまたはyaml）')
     args = parser.parse_args()
 
+    if not Path(args.config).exists():
+        print(f'設定ファイルが見つかりません: {args.config}', file=sys.stderr)
+        sys.exit(1)
     config = load_config(args.config)
     excel_file = args.excel if args.excel else config.get('excel_file')
     value_specs = config['values']
