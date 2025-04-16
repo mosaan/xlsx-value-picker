@@ -28,7 +28,7 @@
 
 2. **出力フォーマットの指定**
    - JSON, YAML, Jinja2テンプレートからフォーマットを選択できます。
-   - 設定ファイル内で指定（推奨）:
+   - 設定ファイル内で指定:
      ```yaml
      output:
        format: json  # json, yaml, jinja2 のいずれかを指定
@@ -100,6 +100,8 @@ values:
       1: a           # 左端の列（A列）→a
       3: c           # 3番目の列（C列）→c
     name: range_data
+output:
+  format: json       # 出力形式を指定（json, yaml, jinja2）
 ```
 
 ## サンプルデータ内容
@@ -146,6 +148,8 @@ values:
       1: a
       3: c
     name: range_data
+output:
+  format: json
 ```
 
 ### 出力例（JSON）
@@ -221,10 +225,10 @@ output:
 - `sample_template.j2` - 外部テンプレートファイルのサンプル
 - `sample_template_file.yaml` - 外部テンプレートファイルを参照する設定ファイルのサンプル
 
-## 出力フォーマット指定の方針
-- これまでCLIの`--format`オプションで出力フォーマット（json/yaml）を指定していましたが、今後は設定ファイル（YAML）側で`output.format`として管理する方針に移行します。
-- CLIの`--format`オプションは将来的に廃止予定です（現状は互換のため残存）。
-- Jinja2テンプレート出力なども含め、すべての出力形式は設定ファイルで一元管理します。
+## 出力フォーマット指定について
+- 出力フォーマット（json/yaml/jinja2）は設定ファイル（YAML）の`output.format`で指定します。
+- 以前あったCLIの`--format`オプションは廃止されました。
+- すべての出力形式の指定は設定ファイルで一元管理されます。
 
 ## インストール方法
 
@@ -247,7 +251,7 @@ xlsx-value-picker --config config.yaml --output result.json
 
 ### モジュール実行
 ```
-python -m xlsx_value_picker --config config.yaml --output result.yaml --format yaml
+python -m xlsx_value_picker --config config.yaml --output result.yaml
 ```
 
 ### Jinja2テンプレート出力の実行例
@@ -259,8 +263,6 @@ xlsx-value-picker --config sample_jinja2.yaml --output report.md
 ```
 xlsx-value-picker --config sample_template_file.yaml --output report.md
 ```
-
---formatオプションでjson/yaml出力を切り替え可能です。
 
 ---
 

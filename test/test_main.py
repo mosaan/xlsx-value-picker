@@ -4,6 +4,7 @@ import sys
 from pathlib import Path
 
 import openpyxl
+import yaml  # Import yaml explicitly for the test
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 import subprocess
@@ -216,3 +217,99 @@ def test_get_excel_values_range_skip_and_include_empty(tmp_path):
         {"a": None, "b": None, "c": None},
         {"a": 4, "b": 5, "c": 6},
     ]
+
+
+def test_output_format_from_config(tmp_path):
+    """Test that the output format specified in the config file is respected"""
+    # Create Excel file and config files for different output formats
+    excel_path = tmp_path / "sample.xlsx"
+    create_sample_excel(excel_path)
+
+    # Create config with YAML output format
+    yaml_config_path = tmp_path / "config_yaml.yaml"
+    yaml_config = f"""\
+excel_file: {excel_path.resolve()}
+values:
+  - sheet: Sheet1
+    cell: A1
+    name: value1
+  - sheet: Sheet2
+    cell: C3
+    name: value2
+output:
+  format: yaml
+"""
+    yaml_config_path.write_text(yaml_config, encoding="utf-8")
+
+    # Create config with JSON output format
+    json_config_path = tmp_path / "config_json.yaml"
+    json_config = f"""\
+excel_file: {excel_path.resolve()}
+values:
+  - sheet: Sheet1
+    cell: A1
+    name: value1
+  - sheet: Sheet2
+    cell: C3
+    name: value2
+output:
+  format: json
+"""
+    json_config_path.write_text(json_config, encoding="utf-8")
+
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(Path(__file__).parent.parent / "src")
+
+    # Test YAML output
+    yaml_output_path = tmp_path / "result.yaml"
+    subprocess.run(
+        [
+            "uv",
+            "run",
+            "xlsx-value-picker",
+            excel_path.resolve(),
+            "--config",
+            yaml_config_path.resolve(),
+            "--output",
+            yaml_output_path.resolve(),
+        ],
+        cwd=tmp_path,
+        capture_output=True,
+        encoding="utf-8",
+        env=env,
+    )
+
+    assert yaml_output_path.exists()
+    # Verify the file contains valid YAML
+    with open(yaml_output_path, encoding="utf-8") as f:
+        yaml_data = yaml.safe_load(f)
+    assert yaml_data["value1"] == 123
+    assert yaml_data["value2"] == "abc"
+
+    # Test JSON output
+    json_output_path = tmp_path / "result.json"
+    out = subprocess.run(
+        [
+            "uv",
+            "run",
+            "xlsx-value-picker",
+            excel_path.resolve(),
+            "--config",
+            json_config_path.resolve(),
+            "--output",
+            json_output_path.resolve(),
+        ],
+        cwd=tmp_path,
+        capture_output=True,
+        encoding="utf-8",
+        env=env,
+    )
+    assert out.returncode == 0, out.stderr
+    assert "出力完了" in out.stdout, out.stdout
+
+    assert json_output_path.exists(), out.stdout
+    # Verify the file contains valid JSON
+    with open(json_output_path, encoding="utf-8") as f:
+        json_data = json.load(f)
+    assert json_data["value1"] == 123
+    assert json_data["value2"] == "abc"

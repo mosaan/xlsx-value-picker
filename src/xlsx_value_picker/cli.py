@@ -28,19 +28,7 @@ def main() -> None:
     parser.add_argument(
         "--include-empty-range-row", action="store_true", help="range指定で全列がNoneの行も出力に含める"
     )
-    parser.add_argument(
-        "--format",
-        choices=["json", "yaml", "jinja2"],
-        default="json",
-        help="出力フォーマット（jsonまたはyaml、jinja2）（廃止予定、設定ファイルのoutput.formatで指定推奨）",
-    )
     args = parser.parse_args()
-
-    # --formatオプションは廃止予定であることを警告する
-    if "--format" in sys.argv:
-        print(
-            "警告: --formatオプションは廃止予定です。設定ファイルのoutput.formatで指定してください。", file=sys.stderr
-        )
 
     if not Path(args.config).exists():
         print(f"設定ファイルが見つかりません: {args.config}", file=sys.stderr)
@@ -60,8 +48,8 @@ def main() -> None:
 
     results = get_excel_values(excel_file, value_specs, include_empty_range_row=args.include_empty_range_row)
 
-    # 出力形式を決定（コマンドライン引数 > 設定ファイル）
-    output_format = args.format if "--format" in sys.argv else config.output.format
+    # 出力形式は設定ファイルから決定
+    output_format = config.output.format
 
     # 出力形式に応じて処理を分岐
     if output_format == "jinja2":
