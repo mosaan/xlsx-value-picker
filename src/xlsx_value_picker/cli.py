@@ -15,33 +15,6 @@ def load_config(config_path: Union[str, Path]) -> Config:
         raw = yaml.safe_load(f) or {}
     return TypeAdapter(Config).validate_python(raw)
 
-def extract_table_records(
-    ws: openpyxl.worksheet.worksheet.Worksheet,
-    table_name: str,
-    columns_map: Dict[str, str]
-) -> List[Dict[str, Any]]:
-    # openpyxlのテーブル取得
-    table = ws.tables.get(table_name)
-    if table is None:
-        raise ValueError(f"テーブルが見つかりません: {table_name}")
-    # Table.refはstr型（例: 'A1:C4'）なのでrange_boundariesで座標取得
-    min_col, min_row, max_col, max_row = openpyxl.utils.range_boundaries(table.ref)
-    if min_row is None or max_row is None or min_col is None or max_col is None:
-        raise ValueError(f"テーブル範囲が不正です: {table.ref}")
-    # ヘッダ行取得
-    header_row = ws.iter_rows(min_row=min_row, max_row=min_row, min_col=min_col, max_col=max_col, values_only=True)
-    headers = next(header_row)
-    col_idx_map = {h: i for i, h in enumerate(headers)}
-    records = []
-    for row in ws.iter_rows(min_row=min_row+1, max_row=max_row, min_col=min_col, max_col=max_col, values_only=True):
-        rec = {}
-        for excel_col, out_key in columns_map.items():
-            if excel_col not in col_idx_map:
-                raise ValueError(f"テーブル列が見つかりません: {excel_col}")
-            rec[out_key] = row[col_idx_map[excel_col]]
-        records.append(rec)
-    return records
-
 def extract_range_records(
     ws: openpyxl.worksheet.worksheet.Worksheet,
     cell_range: str,

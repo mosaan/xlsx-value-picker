@@ -43,8 +43,33 @@ class TableValueSpec(BaseModel):
     def get_value(self, wb: openpyxl.Workbook, include_empty_range_row: bool = False) -> Any:
         for ws in wb.worksheets:
             if self.table in ws.tables:
-                from .cli import extract_table_records
-                return extract_table_records(ws, self.table, self.columns)
+                tbl = ws.tables[self.table]
+                ref = tbl.ref
+                min_col, min_row, max_col, max_row = openpyxl.utils.range_boundaries(ref)
+                if min_col is None or max_col is None or min_row is None or max_row is None:
+                    raise ValueError(f"テーブル範囲が不正です: {ref}")
+                data = []
+                headers = {}
+                # ヘッダ行を取得
+                for header_col_idx in range(int(min_col), int(max_col) + 1):
+                    cell_value = ws.cell(row=min_row, column=header_col_idx).value
+                    if cell_value is not None:
+                        headers[cell_value] = header_col_idx
+                # 各行のデータを取得（ヘッダ行はスキップ）
+                for row_idx in range(min_row + 1, max_row + 1):
+                    row_data = {}
+                    for col_name, out_key in self.columns.items():
+                        col_idx = headers.get(col_name)
+                        if col_idx is not None:
+                            value = ws.cell(row=row_idx, column=col_idx).value
+                        else:
+                            value = None
+                        row_data[out_key] = value
+                    # すべての値がNoneの場合はスキップ（デフォルト）
+                    if not include_empty_range_row and all(v is None for v in row_data.values()):
+                        continue
+                    data.append(row_data)
+                return data
         raise ValueError(f"テーブルが見つかりません: {self.table}")
 
 class RangeValueSpec(BaseModel):
