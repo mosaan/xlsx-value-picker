@@ -1,8 +1,15 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, TypeAdapter
 from typing import List, Dict, Union, Any
 import openpyxl
+from pathlib import Path
 
-class SheetValueSpec(BaseModel):
+class ValueSpecBase(BaseModel):
+    name: str
+
+    def get_value(self, wb: openpyxl.Workbook, include_empty_range_row: bool = False) -> Any:
+        raise NotImplementedError("get_value() must be implemented in subclasses")
+
+class SheetValueSpec(ValueSpecBase):
     sheet: str
     cell: str
     name: str
@@ -19,7 +26,7 @@ class SheetValueSpec(BaseModel):
             sheet = wb[sheet_spec]
         return sheet[self.cell].value
 
-class NamedCellValueSpec(BaseModel):
+class NamedCellValueSpec(ValueSpecBase):
     named_cell: str
     name: str
 
@@ -35,7 +42,7 @@ class NamedCellValueSpec(BaseModel):
         sheet = wb[sheet_name]
         return sheet[cell_addr].value
 
-class TableValueSpec(BaseModel):
+class TableValueSpec(ValueSpecBase):
     table: str
     columns: Dict[str, str]
     name: str
@@ -72,7 +79,7 @@ class TableValueSpec(BaseModel):
                 return data
         raise ValueError(f"テーブルが見つかりません: {self.table}")
 
-class RangeValueSpec(BaseModel):
+class RangeValueSpec(ValueSpecBase):
     range: str
     columns: Dict[str, str]
     name: str
@@ -105,3 +112,18 @@ ValueSpec = Union[SheetValueSpec, NamedCellValueSpec, TableValueSpec, RangeValue
 class Config(BaseModel):
     excel_file: str
     values: List[ValueSpec]
+
+
+def get_excel_values(
+    excel_path: Union[str, Path],
+    value_specs: List[ValueSpec],
+    include_empty_range_row: bool = False
+) -> Dict[str, Any]:
+    wb = openpyxl.load_workbook(excel_path, data_only=True)
+    results = {}
+    for spec in value_specs:
+        # pydanticモデルでなければ変換
+        if not hasattr(spec, '__fields__'):
+            spec = TypeAdapter(ValueSpec).validate_python(spec)
+        results[spec.name] = spec.get_value(wb, include_empty_range_row=include_empty_range_row)
+    return results

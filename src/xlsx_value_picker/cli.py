@@ -7,27 +7,13 @@ from typing import Any, Dict, List, Union, Optional
 import openpyxl
 import yaml
 from pydantic import TypeAdapter
-from .config import Config, SheetValueSpec, NamedCellValueSpec, TableValueSpec, RangeValueSpec, ValueSpec
+from .config import Config, SheetValueSpec, NamedCellValueSpec, TableValueSpec, RangeValueSpec, ValueSpec, get_excel_values
 
 
 def load_config(config_path: Union[str, Path]) -> Config:
     with open(config_path, 'r', encoding='utf-8') as f:
         raw = yaml.safe_load(f) or {}
     return TypeAdapter(Config).validate_python(raw)
-
-def get_excel_values(
-    excel_path: Union[str, Path],
-    value_specs: List[ValueSpec],
-    include_empty_range_row: bool = False
-) -> Dict[str, Any]:
-    wb = openpyxl.load_workbook(excel_path, data_only=True)
-    results = {}
-    for spec in value_specs:
-        # pydanticモデルでなければ変換
-        if not hasattr(spec, '__fields__'):
-            spec = TypeAdapter(ValueSpec).validate_python(spec)
-        results[spec.name] = spec.get_value(wb, include_empty_range_row=include_empty_range_row)
-    return results
 
 def main() -> None:
     parser = argparse.ArgumentParser(description='Excel値取得ツール')
