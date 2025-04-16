@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 import os
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
-from xslx_value_picker.cli import get_excel_values
+from xlsx_value_picker.cli import get_excel_values
 import subprocess
 
 def create_sample_excel(path):
@@ -102,7 +102,7 @@ values:
     env = os.environ.copy()
     env["PYTHONPATH"] = str(Path(__file__).parent.parent / "src")
     result = subprocess.run([
-        "uv", "run", "python", "-m", "xslx_value_picker",
+        "uv", "run", "python", "-m", "xlsx_value_picker",
         "--config", str(config_path.resolve()),
         "--output", str(output_path.resolve())
     ], cwd=tmp_path, capture_output=True, encoding="utf-8", env=env)
@@ -118,7 +118,7 @@ values:
     assert data["value2"] == "abc"
     # 標準出力（--output未指定）
     result = subprocess.run([
-        "uv", "run", "python", "-m", "xslx_value_picker",
+        "uv", "run", "python", "-m", "xlsx_value_picker",
         "--config", str(config_path.resolve())
     ], cwd=tmp_path, capture_output=True, encoding="utf-8", env=env)
     print("stdout (no output):", result.stdout)

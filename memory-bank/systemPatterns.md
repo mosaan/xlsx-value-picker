@@ -14,8 +14,8 @@
 - 出力は現状JSONのみ対応。YAML出力は今後の拡張予定。
 - main.pyのコマンドライン引数（--output, --include-empty-range-row等）はCLI柔軟性向上のため実装。
 - ファイル未指定・未存在・不正なシート/セル指定時は明示的なエラー出力・終了（sys.exit）で堅牢化。
-- src/xslx_value_picker/配下に実装を集約し、パッケージとして配布可能な構成
-- CLIコマンドはpyproject.tomlの[project.scripts]で登録し、uv/pipインストール後にxslx-value-pickerで実行可能
+- src/xlsx_value_picker/配下に実装を集約し、パッケージとして配布可能な構成
+- CLIコマンドはpyproject.tomlの[project.scripts]で登録し、uv/pipインストール後にxlsx-value-pickerで実行可能
 - テストはPYTHONPATH=srcでsrc配下の最新コードを直接参照
 - サブプロセスでのCLIテストもuv run python -m ... + PYTHONPATH指定で仮想環境汚染なし
 - CI/CDはGitHub Actionsでpytestを自動実行
@@ -57,8 +57,8 @@
 - 実装はextract_range_records関数・main.pyのCLI引数で制御され、テストもtest_main.pyで自動化されている。
 
 ## 主要コンポーネント
-- src/xslx_value_picker/cli.py: エントリーポイント、全体の制御
-- src/xslx_value_picker/__main__.py: python -m実行用
+- src/xlsx_value_picker/cli.py: エントリーポイント、全体の制御
+- src/xlsx_value_picker/__main__.py: python -m実行用
 - pyproject.toml: パッケージ・CLI・依存管理
 - test/test_main.py: 単体・E2Eテスト
 - .github/workflows/test.yml: CI自動テスト

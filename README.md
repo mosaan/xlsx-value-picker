@@ -1,4 +1,4 @@
-# xslx-value-picker
+# xlsx-value-picker
 
 ## ユーザーマニュアル
 
@@ -164,12 +164,12 @@ pip install .
 
 ### CLIコマンド
 ```
-xslx-value-picker --config config.yaml --output result.json
+xlsx-value-picker --config config.yaml --output result.json
 ```
 
 ### モジュール実行
 ```
-python -m xslx_value_picker --config config.yaml --output result.yaml --format yaml
+python -m xlsx_value_picker --config config.yaml --output result.yaml --format yaml
 ```
 
 --formatオプションでjson/yaml出力を切り替え可能です。
