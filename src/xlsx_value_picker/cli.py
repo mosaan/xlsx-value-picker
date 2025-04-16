@@ -23,6 +23,10 @@ def main() -> None:
     parser.add_argument('--include-empty-range-row', action='store_true', help='range指定で全列がNoneの行も出力に含める')
     parser.add_argument('--format', choices=['json', 'yaml'], default='json', help='出力フォーマット（jsonまたはyaml）')
     args = parser.parse_args()
+    
+    # --formatオプションは廃止予定であることを警告する
+    if "--format" in sys.argv:
+        print('警告: --formatオプションは廃止予定です。設定ファイルのoutput.formatで指定してください。', file=sys.stderr)
 
     if not Path(args.config).exists():
         print(f'設定ファイルが見つかりません: {args.config}', file=sys.stderr)

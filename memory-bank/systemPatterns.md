@@ -2,7 +2,7 @@
 
 ## システム構成・設計パターン
 
-- 設定ファイル（YAML）→値取得ロジック→出力（JSON/YAML）というシンプルなパイプライン
+- 設定ファイル（YAML）→値取得ロジック→出力（JSON/YAML/Jinja2テンプレート）というシンプルなパイプライン
 - openpyxlのdata_onlyモードで計算後の値を取得
 - コマンドライン引数で設定ファイル・出力ファイルを指定可能
 - 拡張性を考慮し、出力フォーマット追加やエラー処理をモジュール化
@@ -12,6 +12,7 @@
 - エラー処理：範囲外や不正な`*N`指定はValueErrorで明示的に例外化
 - `*N`記法の自動テスト（test_main.py）でシート順指定の動作を検証
 - 出力は現状JSONのみ対応。YAML出力は今後の拡張予定。
+- 出力フォーマット（json/yaml/jinja2等）は今後すべて設定ファイル（YAML）の`output.format`で指定する方針。CLIの`--format`オプションは将来的に廃止予定（現状は互換のため残存）。
 - main.pyのコマンドライン引数（--output, --include-empty-range-row等）はCLI柔軟性向上のため実装。
 - ファイル未指定・未存在・不正なシート/セル指定時は明示的なエラー出力・終了（sys.exit）で堅牢化。
 - src/xlsx_value_picker/配下に実装を集約し、パッケージとして配布可能な構成
@@ -21,6 +22,10 @@
 - CI/CDはGitHub Actionsでpytestを自動実行
 - .gitignoreで開発・テスト生成物を除外、LICENSE（MIT）を付与
 - ドキュメント・サンプル・CI・不要ファイル除外も配布仕様に準拠
+- Jinja2テンプレート出力時は、output.format: jinja2 で切り替え
+- テンプレートは template_file（外部ファイル）または template（YAML内直接記載）のいずれかで指定可能
+- 出力先はCLIの--outputオプションで指定し、YAML内でのoutput_file指定は不要
+- 既存のExcel値抽出仕様（table/range/named cell）・型安全設計・テスト自動化・ドキュメント重視の方針を継続
 
 ## テーブル・範囲指定による複数レコード抽出仕様
 
@@ -55,6 +60,25 @@
 - コマンドラインオプション`--include-empty-range-row`を指定した場合のみ、全列がNoneの行も出力に含める。
 - これにより、意図しない空行の混入を防ぎつつ、必要に応じて明示的に空行も取得できる柔軟な仕様となっている。
 - 実装はextract_range_records関数・main.pyのCLI引数で制御され、テストもtest_main.pyで自動化されている。
+
+### Jinja2テンプレート出力のYAML定義例
+```yaml
+output:
+  format: jinja2
+  # どちらか一方を指定
+  template_file: path/to/template.j2   # 外部ファイルを使う場合
+  # template: |                      # YAML内に直接テンプレートを記載する場合
+  #   {{ data.key1 }} - {{ data.key2 }}
+
+values:
+  - table: Table1
+    columns:
+      Excel列名1: key1
+      Excel列名2: key2
+```
+
+- テンプレート内で参照できる変数名やデータ構造は今後設計・明記予定
+- 既存の出力（JSON/YAML）との排他制御・CLIオプションとの整合性も考慮
 
 ## 主要コンポーネント
 - src/xlsx_value_picker/cli.py: エントリーポイント、全体の制御
