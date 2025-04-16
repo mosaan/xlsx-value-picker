@@ -85,8 +85,20 @@ class RangeValueSpec(BaseModel):
             ws = wb[sheet_name]
         else:
             raise ValueError(f"範囲指定が不正です: {range_str} (シート名を含めて指定してください)")
-        from .cli import extract_range_records
-        return extract_range_records(ws, cell_range, columns_map, include_empty_row=include_empty_range_row)
+            # セル範囲からデータ部分のみ抽出（ヘッダ行含まない前提）
+        min_col, min_row, max_col, max_row = openpyxl.utils.range_boundaries(cell_range)
+        records = []
+        for row in ws.iter_rows(min_row=min_row, max_row=max_row, min_col=min_col, max_col=max_col, values_only=True):
+            rec = {}
+            for col_pos_str, out_key in columns_map.items():
+                col_pos = int(col_pos_str)
+                idx = col_pos - 1  # 1始まり→0始まり
+                rec[out_key] = row[idx]
+            # すべての値がNoneの場合はスキップ（デフォルト）
+            if not include_empty_range_row and all(v is None for v in rec.values()):
+                continue
+            records.append(rec)
+        return records
 
 ValueSpec = Union[SheetValueSpec, NamedCellValueSpec, TableValueSpec, RangeValueSpec]
 
