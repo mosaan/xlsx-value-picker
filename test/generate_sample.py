@@ -1,7 +1,6 @@
 import openpyxl
-from openpyxl.worksheet.table import Table, TableStyleInfo
 from openpyxl.workbook.defined_name import DefinedName
-import os
+from openpyxl.worksheet.table import Table, TableStyleInfo
 
 
 def create_sample_all():
@@ -110,7 +109,7 @@ values:
       1: a
       3: c
     name: range_data
-"""
+"""  # noqa: W293
     with open("sample_jinja2.yaml", "w", encoding="utf-8") as f:
         f.write(yaml_text)
     print("Jinja2テンプレート設定用YAMLファイル sample_jinja2.yaml を作成しました。")

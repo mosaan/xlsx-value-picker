@@ -1,7 +1,7 @@
-import pytest
 import tempfile
-import os
 from pathlib import Path
+
+import pytest
 
 from xlsx_value_picker.template import render_template
 
@@ -92,7 +92,7 @@ def test_excel_data_rendering():
     {% for row in data.range1 %}
     | {{ row.col1 }} | {{ row.col2 }} |
     {% endfor %}
-    """
+    """  # noqa: W293
 
     result = render_template(data=excel_data, template_string=template_string)
 

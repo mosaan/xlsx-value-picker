@@ -1,12 +1,14 @@
-import openpyxl
-import sys
 import json
-from pathlib import Path
 import os
+import sys
+from pathlib import Path
+
+import openpyxl
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
-from xlsx_value_picker.cli import get_excel_values
 import subprocess
+
+from xlsx_value_picker.cli import get_excel_values
 
 
 def create_sample_excel(path):
