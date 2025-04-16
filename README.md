@@ -3,7 +3,7 @@
 ## ユーザーマニュアル
 
 ### 概要
-このツールは、Excelファイルから指定したセルの値を抽出し、JSON形式で出力するコマンドラインツールです。設定ファイル（YAML）で取得対象を柔軟に指定できます。
+このツールは、Excelファイルから指定したセルの値を抽出し、JSON、YAML、またはJinja2テンプレートを使用した任意のテキスト形式で出力するコマンドラインツールです。設定ファイル（YAML）で取得対象を柔軟に指定できます。
 
 ### 使い方
 
@@ -26,7 +26,24 @@
    - `named_cell`を指定した場合は、Excelの名前付きセルから値を取得します（`sheet`や`cell`は不要）。
    - シート名に`*`はExcelの仕様上使えないため、この記法と競合しません。
 
-2. **コマンドの実行**
+2. **出力フォーマットの指定**
+   - JSON, YAML, Jinja2テンプレートからフォーマットを選択できます。
+   - 設定ファイル内で指定（推奨）:
+     ```yaml
+     output:
+       format: json  # json, yaml, jinja2 のいずれかを指定
+     ```
+   - Jinja2テンプレートを使う場合:
+     ```yaml
+     output:
+       format: jinja2
+       # 以下はどちらか一方を指定
+       template: |  # テンプレートを直接指定
+         # データ: {{ data.key1 }}
+       template_file: "path/to/template.j2"  # テンプレートファイルを指定
+     ```
+
+3. **コマンドの実行**
    - コマンド例:
      ```
      uv run python main.py --config config.yaml --output result.json
@@ -40,7 +57,7 @@
    - `--config`を省略した場合は、カレントディレクトリの`config.yaml`が自動的に使用されます。
    - **range指定時の空行（全列None）スキップについて**: デフォルトでは、rangeで指定した範囲内の「すべての列がNoneの行」は出力に含まれません。すべての列がNoneの行も出力したい場合は、`--include-empty-range-row`オプションを指定してください。
 
-3. **出力例**
+4. **出力例**
    ```json
    {
      "total_price": 12345,
@@ -148,6 +165,62 @@ values:
 }
 ```
 
+## Jinja2テンプレート出力機能
+
+### 概要
+Excel値をJSON/YAMLだけでなく、Jinja2テンプレートを使って任意のテキスト形式（Markdown、HTML、CSVなど）で出力できます。
+
+### 設定方法
+設定ファイル（YAML）で以下のように指定します：
+
+```yaml
+output:
+  format: jinja2
+  # 以下はどちらか一方を指定
+  template: |  # テンプレートを直接指定する場合
+    # Excel Data Report
+    
+    ## 基本データ
+    - 果物: {{ data.value1 }}
+    - 別のシートの値: {{ data.value2 }}
+  
+  # または
+  template_file: path/to/template.j2  # 外部テンプレートファイルを指定する場合
+```
+
+### テンプレート内でのデータ参照方法
+- 抽出したExcelデータは `data` オブジェクトとして参照できます
+- 例: `{{ data.sheet1_value }}`, `{% for item in data.table_data %}...{% endfor %}`
+
+### 出力例（Markdown形式）
+
+```markdown
+# Excel Data Report
+
+## 基本データ
+- 果物: りんご
+- 別のシートの値: バナナ
+- 名前付きセル値: りんご
+
+## テーブルデータ
+| 商品ID | 商品名 | 点数 |
+|--------|--------|------|
+| 1 | みかん | 90 |
+| 2 | ぶどう | 80 |
+| 3 | もも | 70 |
+
+## 範囲データ
+- さくらんぼ to メロン
+- いちご to パイナップル
+- キウイ to マンゴー
+```
+
+### サンプルファイル
+本プロジェクトの `test/generate_sample.py` を実行すると、以下のJinja2関連のサンプルファイルが生成されます：
+- `sample_jinja2.yaml` - YAML内にテンプレートを直接記述するサンプル
+- `sample_template.j2` - 外部テンプレートファイルのサンプル
+- `sample_template_file.yaml` - 外部テンプレートファイルを参照する設定ファイルのサンプル
+
 ## 出力フォーマット指定の方針
 - これまでCLIの`--format`オプションで出力フォーマット（json/yaml）を指定していましたが、今後は設定ファイル（YAML）側で`output.format`として管理する方針に移行します。
 - CLIの`--format`オプションは将来的に廃止予定です（現状は互換のため残存）。
@@ -177,6 +250,16 @@ xlsx-value-picker --config config.yaml --output result.json
 python -m xlsx_value_picker --config config.yaml --output result.yaml --format yaml
 ```
 
+### Jinja2テンプレート出力の実行例
+```
+xlsx-value-picker --config sample_jinja2.yaml --output report.md
+```
+
+または外部テンプレートファイルを使用する場合：
+```
+xlsx-value-picker --config sample_template_file.yaml --output report.md
+```
+
 --formatオプションでjson/yaml出力を切り替え可能です。
 
 ---
@@ -196,7 +279,7 @@ python -m xlsx_value_picker --config config.yaml --output result.yaml --format y
    ```
    または
    ```
-   uv add openpyxl pyyaml
+   uv add openpyxl pyyaml jinja2
    ```
 
 3. **開発用依存（テスト）**
@@ -206,19 +289,15 @@ python -m xlsx_value_picker --config config.yaml --output result.yaml --format y
 
 ### ビルド・実行
 
-- 実装は `main.py` に集約されています。
+- 実装は `xlsx_value_picker` パッケージに集約されています。
 - コマンド例:
   ```
-  uv run python main.py --config config.yaml --output result.json
-  ```
-  または
-  ```
-  uv run python main.py --config config.yaml
+  uv run python -m xlsx_value_picker --config config.yaml --output result.json
   ```
 
 ### テスト
 
-- テストは `test_main.py` に記述されています。
+- テストは `test_main.py` と `test_template.py` に記述されています。
 - 実行方法:
   ```
   uv run pytest
@@ -226,7 +305,7 @@ python -m xlsx_value_picker --config config.yaml --output result.yaml --format y
 
 ### 技術スタック・注意点
 
-- Python 3.11 以降
-- openpyxl, PyYAML
+- Python 3.12 以降
+- openpyxl, PyYAML, Jinja2
 - パッケージ管理: uv
 - Windows環境で動作確認済み

@@ -1,5 +1,5 @@
-from pydantic import BaseModel, TypeAdapter
-from typing import List, Dict, Union, Any
+from pydantic import BaseModel, TypeAdapter, Field
+from typing import List, Dict, Union, Any, Optional
 import openpyxl
 from pathlib import Path
 
@@ -81,7 +81,7 @@ class TableValueSpec(ValueSpecBase):
 
 class RangeValueSpec(ValueSpecBase):
     range: str
-    columns: Dict[str, str]
+    columns: Dict[int, str]
     name: str
 
     def get_value(self, wb: openpyxl.Workbook, include_empty_range_row: bool = False) -> Any:
@@ -97,8 +97,9 @@ class RangeValueSpec(ValueSpecBase):
         records = []
         for row in ws.iter_rows(min_row=min_row, max_row=max_row, min_col=min_col, max_col=max_col, values_only=True):
             rec = {}
-            for col_pos_str, out_key in columns_map.items():
-                col_pos = int(col_pos_str)
+            for col_pos_key, out_key in columns_map.items():
+                # Convert string or int key to int
+                col_pos = int(col_pos_key)
                 idx = col_pos - 1  # 1始まり→0始まり
                 rec[out_key] = row[idx]
             # すべての値がNoneの場合はスキップ（デフォルト）
@@ -109,9 +110,23 @@ class RangeValueSpec(ValueSpecBase):
 
 ValueSpec = Union[SheetValueSpec, NamedCellValueSpec, TableValueSpec, RangeValueSpec]
 
+class OutputFormat(BaseModel):
+    format: str = "json"
+    template_file: Optional[str] = None
+    template: Optional[str] = None
+
+    def model_post_init(self, __context: Any) -> None:
+        """Validate that either template_file or template is provided when format is jinja2."""
+        if self.format == "jinja2" and not (self.template_file or self.template):
+            raise ValueError("Jinja2 output format requires either template_file or template to be specified")
+        
+        if self.format == "jinja2" and self.template_file and self.template:
+            raise ValueError("Cannot specify both template_file and template, choose one")
+
 class Config(BaseModel):
     excel_file: str
     values: List[ValueSpec]
+    output: OutputFormat = Field(default_factory=OutputFormat)
 
 
 def get_excel_values(

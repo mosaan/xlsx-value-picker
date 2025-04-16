@@ -1,0 +1,17 @@
+# Excel Data Report (External Template)
+
+## 基本データ
+- 果物: {{ data.value1 }}
+- 別のシートの値: {{ data.value2 }}
+- 名前付きセル値: {{ data.named }}
+
+## テーブルデータ
+| 商品ID | 商品名 | 点数 |
+|--------|--------|------|
+{% for item in data.table_data %}| {{ item.id }} | {{ item.name }} | {{ item.score }} |
+{% endfor %}
+
+## 範囲データ
+{% for item in data.range_data %}
+- {{ item.a }} to {{ item.c }}
+{% endfor %}

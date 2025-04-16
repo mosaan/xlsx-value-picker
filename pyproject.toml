@@ -5,6 +5,7 @@ description = "Excelから値を抽出しJSON/YAML出力するCLIツール"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "jinja2>=3.1.6",
     "openpyxl>=3.1.5",
     "pydantic>=2.11.3",
     "pyyaml>=6.0.2",
@@ -65,6 +66,10 @@ show_error_codes = true
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[build-system]
+requires = ["setuptools>=67.1.0", "wheel>=0.40.0"]
+build-backend = "setuptools.build_meta"
 
 [dependency-groups]
 dev = [

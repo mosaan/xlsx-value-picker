@@ -1,6 +1,7 @@
 import openpyxl
 from openpyxl.worksheet.table import Table, TableStyleInfo
 from openpyxl.workbook.defined_name import DefinedName
+import os
 
 def create_sample_all():
     wb = openpyxl.Workbook()
@@ -63,6 +64,109 @@ values:
         f.write(yaml_text)
     print("YAMLファイル sample_all.yaml を作成しました。")
 
+def create_sample_jinja2_yaml():
+    yaml_text = """
+excel_file: sample_all.xlsx
+output:
+  format: jinja2
+  template: |
+    # Excel Data Report
+    
+    ## 基本データ
+    - 果物: {{ data.value1 }}
+    - 別のシートの値: {{ data.value2 }}
+    - 名前付きセル値: {{ data.named }}
+    
+    ## テーブルデータ
+    | 商品ID | 商品名 | 点数 |
+    |--------|--------|------|
+    {% for item in data.table_data %}| {{ item.id }} | {{ item.name }} | {{ item.score }} |
+    {% endfor %}
+    
+    ## 範囲データ
+    {% for item in data.range_data %}- {{ item.a }} to {{ item.c }}
+    {% endfor %}
+
+values:
+  - sheet: Sheet1
+    cell: A1
+    name: value1
+  - sheet: "*2"
+    cell: B2
+    name: value2
+  - named_cell: MY_CELL
+    name: named
+  - table: Table1
+    columns:
+      商品ID: id
+      商品名: name
+      点数: score
+    name: table_data
+  - range: RangeSheet!A2:C6
+    columns:
+      1: a
+      3: c
+    name: range_data
+"""
+    with open("sample_jinja2.yaml", "w", encoding="utf-8") as f:
+        f.write(yaml_text)
+    print("Jinja2テンプレート設定用YAMLファイル sample_jinja2.yaml を作成しました。")
+
+def create_sample_template_file():
+    template_content = """# Excel Data Report (External Template)
+
+## 基本データ
+- 果物: {{ data.value1 }}
+- 別のシートの値: {{ data.value2 }}
+- 名前付きセル値: {{ data.named }}
+
+## テーブルデータ
+| 商品ID | 商品名 | 点数 |
+|--------|--------|------|
+{% for item in data.table_data %}| {{ item.id }} | {{ item.name }} | {{ item.score }} |
+{% endfor %}
+
+## 範囲データ
+{% for item in data.range_data %}- {{ item.a }} to {{ item.c }}
+{% endfor %}
+"""
+    with open("sample_template.j2", "w", encoding="utf-8") as f:
+        f.write(template_content)
+    print("Jinja2テンプレートファイル sample_template.j2 を作成しました。")
+    
+    yaml_text = """
+excel_file: sample_all.xlsx
+output:
+  format: jinja2
+  template_file: sample_template.j2
+
+values:
+  - sheet: Sheet1
+    cell: A1
+    name: value1
+  - sheet: "*2"
+    cell: B2
+    name: value2
+  - named_cell: MY_CELL
+    name: named
+  - table: Table1
+    columns:
+      商品ID: id
+      商品名: name
+      点数: score
+    name: table_data
+  - range: RangeSheet!A2:C6
+    columns:
+      1: a
+      3: c
+    name: range_data
+"""
+    with open("sample_template_file.yaml", "w", encoding="utf-8") as f:
+        f.write(yaml_text)
+    print("外部テンプレートファイル参照用YAMLファイル sample_template_file.yaml を作成しました。")
+
 if __name__ == "__main__":
     create_sample_all()
     create_sample_all_yaml()
+    create_sample_jinja2_yaml()
+    create_sample_template_file()
