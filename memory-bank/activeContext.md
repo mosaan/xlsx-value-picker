@@ -1,33 +1,26 @@
 # activeContext.md
 
 ## 現在の作業フォーカス
-- 配布・開発・テスト・CI/CDを一貫した構成にリファクタリング
-- main.pyをsrc/xlsx_value_picker/cli.pyへ移動し、__main__.py追加でパッケージ化
-- pyproject.tomlで[project.scripts]にCLIコマンド（xlsx-value-picker）を登録
-- READMEにuv/pipインストール例、uv run xlsx-value-picker実行例、YAML出力例を追記
-- .gitignore強化、LICENSE（MIT）追加、test/配下にテスト・サンプル整理
-- CI（GitHub Actions）でpytest自動実行を追加
-- テストのサブプロセス呼び出しはuv run python -m xlsx_value_picker ...に統一し、PYTHONPATH=srcを付与することで仮想環境へインストールせずに開発中コードをテスト可能にした
-- すべてのテストがパスすることを確認
+- コア関数の型アノテーション付与・CLI分離・ライブラリ化を実施し、外部Pythonプログラムからもimport可能な構造へリファクタリング済み
+- mypyによる型チェックを導入し、型安全性を強化
+- テスト・CI/CD・パッケージ構成も整理され、CLI/サブプロセス/ライブラリ両対応の設計が完成
+- すべてのテストがパスし、開発・配布・CI/CDの一貫性が確保されている
 
 ## 直近の変更
-- main.pyのYAML出力対応・堅牢化
-- src/ディレクトリ化・パッケージ化・エントリポイント整理
-- pyproject.tomlの配布用設定・CLIスクリプト登録
-- README・.gitignore・LICENSE・CI・テスト整理
-- テストはPYTHONPATH=srcでuv run python -m ...方式で安定動作
+- src/xlsx_value_picker/cli.pyのコア関数に型アノテーションを追加
+- CLI専用処理をmain関数・if __name__ == '__main__'以下に分離
+- __init__.pyでコア関数を明示的に公開
+- mypy導入・型エラーなしを確認
 
 ## 次のステップ
 - ドキュメント・サンプルのさらなる充実
-- ユーザーからの追加要望・フィードバック対応
+- ユーザー要望やフィードバックへの対応
 
 ## アクティブな意思決定・考慮事項
-- src/xlsx_value_picker/配下に実装を集約し、パッケージとして配布可能な構成
-- CLIコマンドは[project.scripts]で登録し、uv/pipインストール後にxlsx-value-pickerで実行可能
-- テストはPYTHONPATH=srcでsrc配下の最新コードを直接参照
-- サブプロセスでのCLIテストもuv run python -m ... + PYTHONPATH指定で仮想環境汚染なし
-- CI/CDはGitHub Actionsでpytestを自動実行
+- ライブラリとしてのAPI設計・型安全性を重視
+- CLI/サブプロセス/テスト/外部importすべてに対応する構造を維持
+- ドキュメント・サンプルの拡充でユーザー体験向上を目指す
 
 ## 学び・インサイト
-- 仮想環境にインストールせずPYTHONPATHでsrc配下を参照することで、開発効率・テスト独立性・CI一貫性が向上
+- mypy等の型チェックツール導入で品質・保守性が向上
 - ドキュメント・実装・テストの一貫性維持が重要

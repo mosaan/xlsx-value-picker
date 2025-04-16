@@ -2,26 +2,32 @@ import argparse
 import json
 import sys
 from pathlib import Path
+from typing import Any, Dict, List, Union, Optional
 
 import openpyxl
 import yaml
+from pydantic import TypeAdapter
+from .config import Config, SheetValueSpec, NamedCellValueSpec, TableValueSpec, RangeValueSpec, ValueSpec
 
 
-def load_config(config_path):
+def load_config(config_path: Union[str, Path]) -> Config:
     with open(config_path, 'r', encoding='utf-8') as f:
-        return yaml.safe_load(f)
+        raw = yaml.safe_load(f) or {}
+    return TypeAdapter(Config).validate_python(raw)
 
-def extract_table_records(ws, table_name, columns_map):
+def extract_table_records(
+    ws: openpyxl.worksheet.worksheet.Worksheet,
+    table_name: str,
+    columns_map: Dict[str, str]
+) -> List[Dict[str, Any]]:
     # openpyxlのテーブル取得
-    table = None
-    for t in ws._tables.values():
-        if t.name == table_name:
-            table = t
-            break
+    table = ws.tables.get(table_name)
     if table is None:
         raise ValueError(f"テーブルが見つかりません: {table_name}")
     # Table.refはstr型（例: 'A1:C4'）なのでrange_boundariesで座標取得
     min_col, min_row, max_col, max_row = openpyxl.utils.range_boundaries(table.ref)
+    if min_row is None or max_row is None or min_col is None or max_col is None:
+        raise ValueError(f"テーブル範囲が不正です: {table.ref}")
     # ヘッダ行取得
     header_row = ws.iter_rows(min_row=min_row, max_row=min_row, min_col=min_col, max_col=max_col, values_only=True)
     headers = next(header_row)
@@ -36,7 +42,12 @@ def extract_table_records(ws, table_name, columns_map):
         records.append(rec)
     return records
 
-def extract_range_records(ws, cell_range, columns_map, include_empty_row=False):
+def extract_range_records(
+    ws: openpyxl.worksheet.worksheet.Worksheet,
+    cell_range: str,
+    columns_map: Dict[str, str],
+    include_empty_row: bool = False
+) -> List[Dict[str, Any]]:
     # セル範囲からデータ部分のみ抽出（ヘッダ行含まない前提）
     min_col, min_row, max_col, max_row = openpyxl.utils.range_boundaries(cell_range)
     records = []
@@ -52,69 +63,21 @@ def extract_range_records(ws, cell_range, columns_map, include_empty_row=False):
         records.append(rec)
     return records
 
-def get_excel_values(excel_path, value_specs, include_empty_range_row=False):
+def get_excel_values(
+    excel_path: Union[str, Path],
+    value_specs: List[ValueSpec],
+    include_empty_range_row: bool = False
+) -> Dict[str, Any]:
     wb = openpyxl.load_workbook(excel_path, data_only=True)
     results = {}
-    sheetnames = wb.sheetnames
     for spec in value_specs:
-        if 'table' in spec:
-            # テーブル指定
-            table_name = spec['table']
-            columns_map = spec['columns']
-            # テーブルは全シートから探索
-            found = False
-            for ws in wb.worksheets:
-                if table_name in ws.tables:
-                    records = extract_table_records(ws, table_name, columns_map)
-                    results[spec.get('name', table_name)] = records
-                    found = True
-                    break
-            if not found:
-                raise ValueError(f"テーブルが見つかりません: {table_name}")
-        elif 'range' in spec:
-            # 範囲指定
-            range_str = spec['range']
-            columns_map = spec['columns']
-            if '!' in range_str:
-                sheet_name, cell_range = range_str.split('!', 1)
-                ws = wb[sheet_name]
-            else:
-                ws = wb.active
-                cell_range = range_str
-            records = extract_range_records(ws, cell_range, columns_map, include_empty_row=include_empty_range_row)
-            results[spec.get('name', range_str)] = records
-        elif 'named_cell' in spec:
-            # 名前付きセル優先
-            name = spec['named_cell']
-            dn = wb.defined_names.get(name)
-            if dn is None:
-                raise ValueError(f"名前付きセルが見つかりません: {name}")
-            # 参照先（シート名, セルアドレス）を取得
-            dest = list(dn.destinations)
-            if not dest:
-                raise ValueError(f"名前付きセルの参照先が不正です: {name}")
-            sheet_name, cell_addr = dest[0]
-            sheet = wb[sheet_name]
-            value = sheet[cell_addr].value
-            results[spec['name']] = value
-        else:
-            sheet_spec = spec['sheet']
-            if isinstance(sheet_spec, str) and sheet_spec.startswith('*'):
-                # シート名が'*N'形式の場合、左からN番目のシートを選択
-                try:
-                    idx = int(sheet_spec[1:]) - 1
-                    if idx < 0 or idx >= len(sheetnames):
-                        raise IndexError
-                    sheet = wb[sheetnames[idx]]
-                except (ValueError, IndexError):
-                    raise ValueError(f"シート指定が不正です: {sheet_spec} (シート数: {len(sheetnames)})")
-            else:
-                sheet = wb[sheet_spec]
-            value = sheet[spec['cell']].value
-            results[spec['name']] = value
+        # pydanticモデルでなければ変換
+        if not hasattr(spec, '__fields__'):
+            spec = TypeAdapter(ValueSpec).validate_python(spec)
+        results[spec.name] = spec.get_value(wb, include_empty_range_row=include_empty_range_row)
     return results
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(description='Excel値取得ツール')
     parser.add_argument('excel', nargs='?', help='Excelファイルパス（コマンドライン優先）')
     parser.add_argument('-c', '--config', default='config.yaml', help='設定ファイルパス')
@@ -126,9 +89,9 @@ def main():
     if not Path(args.config).exists():
         print(f'設定ファイルが見つかりません: {args.config}', file=sys.stderr)
         sys.exit(1)
-    config = load_config(args.config)
-    excel_file = args.excel if args.excel else config.get('excel_file')
-    value_specs = config['values']
+    config: Config = load_config(args.config)
+    excel_file = args.excel if args.excel else config.excel_file
+    value_specs = config.values
 
     if not excel_file:
         print('Excelファイルが指定されていません（コマンドラインまたは設定ファイルで指定してください）', file=sys.stderr)
