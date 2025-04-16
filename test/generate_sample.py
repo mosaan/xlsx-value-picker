@@ -3,20 +3,21 @@ from openpyxl.worksheet.table import Table, TableStyleInfo
 from openpyxl.workbook.defined_name import DefinedName
 import os
 
+
 def create_sample_all():
     wb = openpyxl.Workbook()
     ws1 = wb.active
     ws1.title = "Sheet1"
-    ws1['A1'] = "りんご"
-    ws1['B2'] = "=CONCAT(\"あ\",\"い\")"
-    ws1['C3'] = "日本語テスト"
+    ws1["A1"] = "りんご"
+    ws1["B2"] = '=CONCAT("あ","い")'
+    ws1["C3"] = "日本語テスト"
     # 名前付きセル
-    dn = DefinedName('MY_CELL', attr_text="'Sheet1'!$A$1")
+    dn = DefinedName("MY_CELL", attr_text="'Sheet1'!$A$1")
     wb.defined_names.add(dn)
     # 2枚目のシート
     ws2 = wb.create_sheet("Sheet2")
-    ws2['A1'] = "ダミー"
-    ws2['B2'] = "バナナ"
+    ws2["A1"] = "ダミー"
+    ws2["B2"] = "バナナ"
     # テーブル用データ
     ws3 = wb.create_sheet("TableSheet")
     ws3.append(["商品ID", "商品名", "点数"])
@@ -35,6 +36,7 @@ def create_sample_all():
     ws4.append(["キウイ", "レモン", "マンゴー"])
     wb.save("sample_all.xlsx")
     print("Excelファイル sample_all.xlsx を作成しました。")
+
 
 def create_sample_all_yaml():
     yaml_text = """
@@ -63,6 +65,7 @@ values:
     with open("sample_all.yaml", "w", encoding="utf-8") as f:
         f.write(yaml_text)
     print("YAMLファイル sample_all.yaml を作成しました。")
+
 
 def create_sample_jinja2_yaml():
     yaml_text = """
@@ -112,6 +115,7 @@ values:
         f.write(yaml_text)
     print("Jinja2テンプレート設定用YAMLファイル sample_jinja2.yaml を作成しました。")
 
+
 def create_sample_template_file():
     template_content = """# Excel Data Report (External Template)
 
@@ -133,7 +137,7 @@ def create_sample_template_file():
     with open("sample_template.j2", "w", encoding="utf-8") as f:
         f.write(template_content)
     print("Jinja2テンプレートファイル sample_template.j2 を作成しました。")
-    
+
     yaml_text = """
 excel_file: sample_all.xlsx
 output:
@@ -164,6 +168,7 @@ values:
     with open("sample_template_file.yaml", "w", encoding="utf-8") as f:
         f.write(yaml_text)
     print("外部テンプレートファイル参照用YAMLファイル sample_template_file.yaml を作成しました。")
+
 
 if __name__ == "__main__":
     create_sample_all()

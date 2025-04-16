@@ -3,19 +3,22 @@ import sys
 import json
 from pathlib import Path
 import os
+
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 from xlsx_value_picker.cli import get_excel_values
 import subprocess
+
 
 def create_sample_excel(path):
     wb = openpyxl.Workbook()
     ws1 = wb.active
     ws1.title = "Sheet1"
-    ws1['A1'] = 123
-    ws1['B2'] = "=SUM(1, 2)"
+    ws1["A1"] = 123
+    ws1["B2"] = "=SUM(1, 2)"
     ws2 = wb.create_sheet("Sheet2")
-    ws2['C3'] = "abc"
+    ws2["C3"] = "abc"
     wb.save(path)
+
 
 def create_sample_excel_with_table(path):
     wb = openpyxl.Workbook()
@@ -26,11 +29,13 @@ def create_sample_excel_with_table(path):
     ws.append([2, "Bob", 80])
     ws.append([3, "Carol", 70])
     from openpyxl.worksheet.table import Table, TableStyleInfo
+
     tab = Table(displayName="Table1", ref="A1:C4")
     style = TableStyleInfo(name="TableStyleMedium9", showRowStripes=True)
     tab.tableStyleInfo = style
     ws.add_table(tab)
     wb.save(path)
+
 
 def create_sample_excel_with_range(path):
     wb = openpyxl.Workbook()
@@ -42,6 +47,7 @@ def create_sample_excel_with_range(path):
     ws.append([12, 22, 32])
     wb.save(path)
 
+
 def create_sample_excel_with_empty_rows(path):
     wb = openpyxl.Workbook()
     ws = wb.active
@@ -51,6 +57,7 @@ def create_sample_excel_with_empty_rows(path):
     ws.append([None, None, None])  # 全列Noneの行
     ws.append([4, 5, 6])
     wb.save(path)
+
 
 def test_get_excel_values(tmp_path):
     excel_path = tmp_path / "sample.xlsx"
@@ -66,6 +73,7 @@ def test_get_excel_values(tmp_path):
     assert result["value2"] is None
     assert result["value3"] == "abc"
 
+
 def test_get_excel_values_sheet_index(tmp_path):
     excel_path = tmp_path / "sample.xlsx"
     create_sample_excel(excel_path)
@@ -76,6 +84,7 @@ def test_get_excel_values_sheet_index(tmp_path):
     result = get_excel_values(str(excel_path), value_specs)
     assert result["value1"] == 123
     assert result["value2"] == "abc"
+
 
 def test_main_output_file_and_stdout(tmp_path):
     # Excelファイルと設定ファイルを作成
@@ -101,11 +110,23 @@ values:
 
     env = os.environ.copy()
     env["PYTHONPATH"] = str(Path(__file__).parent.parent / "src")
-    result = subprocess.run([
-        "uv", "run", "python", "-m", "xlsx_value_picker",
-        "--config", str(config_path.resolve()),
-        "--output", str(output_path.resolve())
-    ], cwd=tmp_path, capture_output=True, encoding="utf-8", env=env)
+    result = subprocess.run(
+        [
+            "uv",
+            "run",
+            "python",
+            "-m",
+            "xlsx_value_picker",
+            "--config",
+            str(config_path.resolve()),
+            "--output",
+            str(output_path.resolve()),
+        ],
+        cwd=tmp_path,
+        capture_output=True,
+        encoding="utf-8",
+        env=env,
+    )
 
     print("stdout:", result.stdout)
     print("stderr:", result.stderr)
@@ -117,10 +138,13 @@ values:
     assert data["value1"] == 123
     assert data["value2"] == "abc"
     # 標準出力（--output未指定）
-    result = subprocess.run([
-        "uv", "run", "python", "-m", "xlsx_value_picker",
-        "--config", str(config_path.resolve())
-    ], cwd=tmp_path, capture_output=True, encoding="utf-8", env=env)
+    result = subprocess.run(
+        ["uv", "run", "python", "-m", "xlsx_value_picker", "--config", str(config_path.resolve())],
+        cwd=tmp_path,
+        capture_output=True,
+        encoding="utf-8",
+        env=env,
+    )
     print("stdout (no output):", result.stdout)
     print("stderr (no output):", result.stderr)
     print("returncode (no output):", result.returncode)
@@ -129,15 +153,17 @@ values:
     assert stdout_json["value1"] == 123
     assert stdout_json["value2"] == "abc"
 
+
 def test_get_excel_values_named_cell(tmp_path):
     excel_path = tmp_path / "sample.xlsx"
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "Sheet1"
-    ws['A1'] = 999
+    ws["A1"] = 999
     # 名前付きセルを新APIで追加（openpyxl 3.1以降推奨）
     from openpyxl.workbook.defined_name import DefinedName
-    dn = DefinedName('MY_CELL', attr_text=f"'{ws.title}'!$A$1")
+
+    dn = DefinedName("MY_CELL", attr_text=f"'{ws.title}'!$A$1")
     wb.defined_names.add(dn)
     wb.save(excel_path)
     value_specs = [
@@ -146,12 +172,11 @@ def test_get_excel_values_named_cell(tmp_path):
     result = get_excel_values(str(excel_path), value_specs)
     assert result["foo"] == 999
 
+
 def test_get_excel_values_table(tmp_path):
     excel_path = tmp_path / "table.xlsx"
     create_sample_excel_with_table(excel_path)
-    value_specs = [
-        {"table": "Table1", "columns": {"ID": "id", "Score": "score"}, "name": "table_data"}
-    ]
+    value_specs = [{"table": "Table1", "columns": {"ID": "id", "Score": "score"}, "name": "table_data"}]
     result = get_excel_values(str(excel_path), value_specs)
     assert result["table_data"] == [
         {"id": 1, "score": 90},
@@ -159,12 +184,11 @@ def test_get_excel_values_table(tmp_path):
         {"id": 3, "score": 70},
     ]
 
+
 def test_get_excel_values_range(tmp_path):
     excel_path = tmp_path / "range.xlsx"
     create_sample_excel_with_range(excel_path)
-    value_specs = [
-        {"range": "Sheet1!A2:C4", "columns": {"1": "a", "3": "c"}, "name": "range_data"}
-    ]
+    value_specs = [{"range": "Sheet1!A2:C4", "columns": {"1": "a", "3": "c"}, "name": "range_data"}]
     result = get_excel_values(str(excel_path), value_specs)
     assert result["range_data"] == [
         {"a": 10, "c": 30},
@@ -172,12 +196,11 @@ def test_get_excel_values_range(tmp_path):
         {"a": 12, "c": 32},
     ]
 
+
 def test_get_excel_values_range_skip_and_include_empty(tmp_path):
     excel_path = tmp_path / "emptyrow.xlsx"
     create_sample_excel_with_empty_rows(excel_path)
-    value_specs = [
-        {"range": "Sheet1!A2:C4", "columns": {"1": "a", "2": "b", "3": "c"}, "name": "range_data"}
-    ]
+    value_specs = [{"range": "Sheet1!A2:C4", "columns": {"1": "a", "2": "b", "3": "c"}, "name": "range_data"}]
     # デフォルト（空行スキップ）
     result = get_excel_values(str(excel_path), value_specs)
     assert result["range_data"] == [

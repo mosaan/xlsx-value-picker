@@ -1,13 +1,16 @@
-from pydantic import BaseModel, TypeAdapter, Field
-from typing import List, Dict, Union, Any, Optional
-import openpyxl
 from pathlib import Path
+from typing import Any
+
+import openpyxl
+from pydantic import BaseModel, Field, TypeAdapter
+
 
 class ValueSpecBase(BaseModel):
     name: str
 
     def get_value(self, wb: openpyxl.Workbook, include_empty_range_row: bool = False) -> Any:
         raise NotImplementedError("get_value() must be implemented in subclasses")
+
 
 class SheetValueSpec(ValueSpecBase):
     sheet: str
@@ -17,7 +20,7 @@ class SheetValueSpec(ValueSpecBase):
     def get_value(self, wb: openpyxl.Workbook, include_empty_range_row: bool = False) -> Any:
         sheet_spec = self.sheet
         sheetnames = wb.sheetnames
-        if isinstance(sheet_spec, str) and sheet_spec.startswith('*'):
+        if isinstance(sheet_spec, str) and sheet_spec.startswith("*"):
             idx = int(sheet_spec[1:]) - 1
             if idx < 0 or idx >= len(sheetnames):
                 raise ValueError(f"シート指定が不正です: {sheet_spec} (シート数: {len(sheetnames)})")
@@ -25,6 +28,7 @@ class SheetValueSpec(ValueSpecBase):
         else:
             sheet = wb[sheet_spec]
         return sheet[self.cell].value
+
 
 class NamedCellValueSpec(ValueSpecBase):
     named_cell: str
@@ -42,9 +46,10 @@ class NamedCellValueSpec(ValueSpecBase):
         sheet = wb[sheet_name]
         return sheet[cell_addr].value
 
+
 class TableValueSpec(ValueSpecBase):
     table: str
-    columns: Dict[str, str]
+    columns: dict[str, str]
     name: str
 
     def get_value(self, wb: openpyxl.Workbook, include_empty_range_row: bool = False) -> Any:
@@ -79,16 +84,17 @@ class TableValueSpec(ValueSpecBase):
                 return data
         raise ValueError(f"テーブルが見つかりません: {self.table}")
 
+
 class RangeValueSpec(ValueSpecBase):
     range: str
-    columns: Dict[int, str]
+    columns: dict[int, str]
     name: str
 
     def get_value(self, wb: openpyxl.Workbook, include_empty_range_row: bool = False) -> Any:
         range_str = self.range
         columns_map = self.columns
-        if '!' in range_str:
-            sheet_name, cell_range = range_str.split('!', 1)
+        if "!" in range_str:
+            sheet_name, cell_range = range_str.split("!", 1)
             ws = wb[sheet_name]
         else:
             raise ValueError(f"範囲指定が不正です: {range_str} (シート名を含めて指定してください)")
@@ -108,37 +114,38 @@ class RangeValueSpec(ValueSpecBase):
             records.append(rec)
         return records
 
-ValueSpec = Union[SheetValueSpec, NamedCellValueSpec, TableValueSpec, RangeValueSpec]
+
+ValueSpec = SheetValueSpec | NamedCellValueSpec | TableValueSpec | RangeValueSpec
+
 
 class OutputFormat(BaseModel):
     format: str = "json"
-    template_file: Optional[str] = None
-    template: Optional[str] = None
+    template_file: str | None = None
+    template: str | None = None
 
     def model_post_init(self, __context: Any) -> None:
         """Validate that either template_file or template is provided when format is jinja2."""
         if self.format == "jinja2" and not (self.template_file or self.template):
             raise ValueError("Jinja2 output format requires either template_file or template to be specified")
-        
+
         if self.format == "jinja2" and self.template_file and self.template:
             raise ValueError("Cannot specify both template_file and template, choose one")
 
+
 class Config(BaseModel):
     excel_file: str
-    values: List[ValueSpec]
+    values: list[ValueSpec]
     output: OutputFormat = Field(default_factory=OutputFormat)
 
 
 def get_excel_values(
-    excel_path: Union[str, Path],
-    value_specs: List[ValueSpec],
-    include_empty_range_row: bool = False
-) -> Dict[str, Any]:
+    excel_path: str | Path, value_specs: list[ValueSpec], include_empty_range_row: bool = False
+) -> dict[str, Any]:
     wb = openpyxl.load_workbook(excel_path, data_only=True)
     results = {}
     for spec in value_specs:
         # pydanticモデルでなければ変換
-        if not hasattr(spec, '__fields__'):
+        if not hasattr(spec, "__fields__"):
             spec = TypeAdapter(ValueSpec).validate_python(spec)
         results[spec.name] = spec.get_value(wb, include_empty_range_row=include_empty_range_row)
     return results
