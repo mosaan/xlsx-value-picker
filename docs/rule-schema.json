@@ -4,7 +4,10 @@
   "properties": {
     "fields": {
       "type": "object",
-      "additionalProperties": { "type": "string" }
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^[^!]+![A-Z]+[0-9]+$"
+      }
     },
     "rules": {
       "type": "array",
