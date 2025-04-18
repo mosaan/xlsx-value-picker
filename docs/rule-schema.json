@@ -23,7 +23,7 @@
     }
   },
   "required": ["fields", "rules"],
-  "definitions": {
+  "$defs": {
     "Expression": {
       "type": "object",
       "oneOf": [
