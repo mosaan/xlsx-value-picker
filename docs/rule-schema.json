@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "fields": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    },
+    "rules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "expression": { "$ref": "#/definitions/Expression" },
+          "error_message": { "type": "string" }
+        },
+        "required": ["name", "expression", "error_message"]
+      }
+    }
+  },
+  "required": ["fields", "rules"],
+  "definitions": {
+    "Expression": {
+      "type": "object",
+      "oneOf": [
+        { "$ref": "#/definitions/CompareExpression" },
+        { "$ref": "#/definitions/RequiredExpression" },
+        { "$ref": "#/definitions/RegexMatchExpression" },
+        { "$ref": "#/definitions/EnumExpression" },
+        { "$ref": "#/definitions/AllOfExpression" },
+        { "$ref": "#/definitions/AnyOfExpression" },
+        { "$ref": "#/definitions/NotExpression" }
+      ]
+    },
+    "CompareExpression": {
+      "type": "object",
+      "properties": {
+        "compare": {
+          "type": "object",
+          "properties": {
+            "left": { "type": "string" },
+            "operator": {
+              "type": "string",
+              "enum": ["==", "!=", ">", ">=", "<", "<="]
+            },
+            "right": { "type": "string" }
+          },
+          "required": ["left", "operator", "right"]
+        }
+      },
+      "required": ["compare"]
+    },
+    "RequiredExpression": {
+      "type": "object",
+      "properties": {
+        "field": { "type": "string" },
+        "required": { "type": "boolean", "const": true }
+      },
+      "required": ["field", "required"]
+    },
+    "RegexMatchExpression": {
+      "type": "object",
+      "properties": {
+        "regex_match": {
+          "type": "object",
+          "properties": {
+            "field": { "type": "string" },
+            "pattern": { "type": "string", "format": "regex" }
+          },
+          "required": ["field", "pattern"]
+        }
+      },
+      "required": ["regex_match"]
+    },
+    "EnumExpression": {
+      "type": "object",
+      "properties": {
+        "enum": {
+          "type": "object",
+          "properties": {
+            "field": { "type": "string" },
+            "values": { 
+              "type": "array",
+              "items": { "type": "string" },
+              "minItems": 1
+            },
+            "case_sensitive": { "type": "boolean" }
+          },
+          "required": ["field", "values"]
+        }
+      },
+      "required": ["enum"]
+    },
+    "AllOfExpression": {
+      "type": "object",
+      "properties": {
+        "all_of": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/Expression" }
+        }
+      },
+      "required": ["all_of"]
+    },
+    "AnyOfExpression": {
+      "type": "object",
+      "properties": {
+        "any_of": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/Expression" }
+        }
+      },
+      "required": ["any_of"]
+    },
+    "NotExpression": {
+      "type": "object",
+      "properties": {
+        "not": { "$ref": "#/definitions/Expression" }
+      },
+      "required": ["not"]
+    }
+  }
+}
