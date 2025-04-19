@@ -14,6 +14,7 @@ excel-validator [オプション] <入力ファイル>
 
 #### 検証オプション
 - `--ignore-errors`: 検証エラーが発生しても処理を継続します。
+- `--validate-only`: バリデーションのみを実行し、値の抽出や出力は行いません。
 
 #### 出力オプション
 - `-o`, `--output <出力ファイル>`: JSONデータの出力先ファイルを指定します。
@@ -45,4 +46,19 @@ excel-validator -o results.json input.xlsx
 ### Jinja2テンプレートを使用して出力
 ```
 excel-validator --template template.j2 input.xlsx
+```
+
+### バリデーションのみを実行
+```
+excel-validator --validate-only input.xlsx
+```
+
+### バリデーションエラーを無視して処理を継続
+```
+excel-validator --ignore-errors input.xlsx
+```
+
+### バリデーション結果をログファイルに出力
+```
+excel-validator --log validation.log input.xlsx
 ```
