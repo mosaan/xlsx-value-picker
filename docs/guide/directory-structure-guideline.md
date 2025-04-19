@@ -8,10 +8,10 @@
 
 - **`.github/`**: GitHub ActionsのワークフローやCopilotの設定など、GitHub関連の設定ファイルを格納します。
 - **`docs/`**: プロジェクトに関するドキュメントを格納します。
-    - **`guide/`**: 開発を進める上での各種ガイドライン（本ドキュメント含む）を格納します。
+    - **`design/`**: 設計に関するドキュメント（設定ローダー、バリデーションなど）を格納します。
+    - **`guide/`**: 開発を進める上での各種ガイドライン（本ドキュメント、依存関係管理、バージョン管理など）を格納します。
+    - **`project/`**: プロジェクト全体に関わるドキュメント（要件定義、技術選定、プロジェクトステータスなど）を格納します。
     - **`spec/`**: 仕様書（CLI仕様、ルールスキーマなど）を格納します。
-    - **`design/`**: 設計に関するドキュメントを格納します。
-    - **`project/`**: プロジェクト全体に関わるドキュメント（要件定義、技術選定など）を格納します。
     - **`task_log/`**: 特定のタスクに関する計画や記録を格納します。
 - **`src/`**: プロジェクトのソースコードを格納します。
     - **`xlsx_value_picker/`**: メインとなるPythonパッケージです。内部の構造は機能に応じて適切に分割します。
@@ -22,31 +22,59 @@
 
 ## 推奨するプロジェクト拡張時のディレクトリ構成
 
-今後機能拡張を行う場合に備えて、以下のようなディレクトリ構成を推奨します：
+現在のプロジェクト構造を基盤とし、今後機能拡張を行う場合は、以下のようなディレクトリ構成を参考にしてください。
 
 ```
 xlsx-value-picker/
-├── ...（既存のディレクトリ）
+├── .github/
+├── docs/
+│   ├── design/
+│   ├── guide/
+│   ├── project/
+│   ├── spec/
+│   └── task_log/
 ├── src/
 │   └── xlsx_value_picker/
-│       ├── ...（既存のファイル）
-│       ├── validator/           # バリデーション機能追加時
+│       ├── __init__.py
+│       ├── __main__.py
+│       ├── cli.py
+│       ├── config_loader.py
+│       ├── config.py
+│       ├── excel_processor.py
+│       ├── output_formatter.py
+│       ├── template.py
+│       ├── validator/           # 例: バリデーション機能追加時
 │       │   ├── __init__.py
 │       │   ├── engine.py        # バリデーションエンジン
 │       │   └── rules.py         # ルール定義・実装
-│       └── plugins/             # プラグイン機能追加時
+│       └── plugins/             # 例: プラグイン機能追加時
 │           └── __init__.py
-├── examples/                    # 使用例
+├── test/
+│   ├── __init__.py
+│   ├── create_test_file.py
+│   ├── generate_sample.py
+│   ├── sample_template.j2
+│   ├── test_cli_integration.py
+│   ├── test_config_loader.py
+│   ├── test_excel_processor.py
+│   ├── test_main.py
+│   ├── test_output_formatter.py
+│   ├── test_template.py
+│   └── data/
+│       ├── config.yaml
+│       └── test.xlsx
+├── examples/                    # 例: 使用例追加時
 │   ├── simple.yaml              # 基本的な使用例
 │   ├── advanced.yaml            # 高度な設定例
 │   └── template_examples/       # テンプレート例
-├── docs/
-│   ├── ...（既存のファイル）
-│   ├── api/                     # API仕様書
-│   └── examples/                # 例と使い方の詳細説明
-└── scripts/                     # 開発用スクリプト
-    ├── release.py               # リリース準備スクリプト
-    └── generate_docs.py         # ドキュメント生成
+├── scripts/                     # 例: 開発用スクリプト追加時
+│   ├── release.py               # リリース準備スクリプト
+│   └── generate_docs.py         # ドキュメント生成
+├── LICENSE
+├── README.md
+├── pyproject.toml
+├── uv.lock
+└── .python-version
 ```
 
 ## ファイル命名規則
