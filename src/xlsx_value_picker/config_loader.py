@@ -601,7 +601,7 @@ class ConfigLoader:
     """設定ファイルローダー"""
 
     DEFAULT_SCHEMA_PATH: ClassVar[str] = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "docs", "rule-schema.json"
+        os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "docs", "spec", "rule-schema.json"
     )
 
     def __init__(self, schema_path: str = None):

@@ -47,7 +47,7 @@
               "type": "string",
               "enum": ["==", "!=", ">", ">=", "<", "<="]
             },
-            "right": { "type": "string" }
+            "right": { "oneOf": [{ "type": "string" }, { "type": "number" }] }
           },
           "required": ["left", "operator", "right"]
         }

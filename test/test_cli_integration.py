@@ -32,7 +32,7 @@ def create_test_excel(path):
     ws1["F1"] = 20                  # 有効な年齢
     ws1["F2"] = 15                  # 無効な年齢
     ws1["G1"] = "その他"            # 選択肢
-    ws1["G2"] = ""                  # 空（無効）
+    ws1["G2"] = "コメント"          # コメント（有効）
     
     ws2 = wb.create_sheet("Sheet2")
     ws2["A1"] = "Sheet2値1"
@@ -166,7 +166,7 @@ def create_config_with_failing_validation_yaml(path):
             "email": "Sheet1!E2",  # 無効なメールアドレス
             "age": "Sheet1!F2",    # 無効な年齢
             "selection": "Sheet1!G1",  # その他
-            "comment": "Sheet1!G2"    # 空
+            "comment": "Sheet1!D4"    # 空セル
         },
         "rules": [
             {

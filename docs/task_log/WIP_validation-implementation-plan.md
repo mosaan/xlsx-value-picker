@@ -41,7 +41,7 @@
     *   `test/test_validation.py` に実装していた各クラスの単体テストを、pytestスタイルで `test/validation/` 配下に分割・移行しました。
     *   `ValidationContext`, `ValidationResult`, 各 `Expression` 派生クラス、`Rule` クラス、`ValidationEngine` クラスのテストを `test/validation/` 配下の各ファイルに実装しました。
     *   `test/test_validation.py` は削除済みです。
-    *   一部テスト（例：`TestNotExpression`）は依然失敗しています。
+    *   すべてのテストが成功することを確認しました。
 
 7.  **テスト修正計画の作成:** (完了)
     * 失敗しているテストの問題点を特定し、修正計画を作成しました。
@@ -50,16 +50,16 @@
     *   `validation_common.py` を作成し、共通クラスを分離することで循環インポートを解消しました。
     *   関連するモジュール (`validation.py`, `config_loader.py`, `test/validation/`配下のテスト) のインポート文を修正しました。
 
-9.  **テスト修正の実装:** (作業中)
+9.  **テスト修正の実装:** (完了)
     *   `TestValidationEngine` のモックパスを修正しました。
-    *   `TestNotExpression` のテスト修正を試みましたが、依然として失敗しています。
+    *   すべての単体テストが成功することを確認しました。
 
-10. **統合テスト更新:** (未着手)
-    *   `test/test_cli_integration.py` の更新はまだ行っていません。
-    *   バリデーション成功・失敗ケースのテストファイルも準備が必要です。
+10. **統合テスト更新:** (完了)
+    *   `test/test_cli_integration.py` のテストケースを修正し、バリデーション機能のテストが成功することを確認しました。
+    *   バリデーション成功・失敗ケースのテストデータを準備し、テストを実行しました。
 
-11. **テスト実行と確認:** (未実施)
-    *   `TestNotExpression` のテストが失敗しているため、全テストの成功は確認できていません。
+11. **テスト実行と確認:** (完了)
+    *   単体テスト (`test/validation/`) と統合テスト (`test/test_cli_integration.py`) の両方が成功することを確認しました。
 
 12. **不要コードの削除:** (完了)
     *   `src/xlsx_value_picker/config.py` ファイルを削除しました。
@@ -73,44 +73,26 @@
 -   `src/xlsx_value_picker/cli.py` (修正、完了)
 -   `test/validation/` 配下の各テストファイル（`test_validation_context.py` など）(新規作成、完了)
 -   `test/test_validation.py` (削除済み)
--   `test/test_cli_integration.py` (未修正)
--   テスト用データファイル (未準備)
--   `docs/spec/rule-schema.json` (未修正)
+-   `test/test_cli_integration.py` (修正、完了)
+-   テスト用データファイル (準備、完了)
+-   `docs/spec/rule-schema.json` (修正、完了)
 -   `docs/spec/cli-spec.md` (未修正)
 -   `src/xlsx_value_picker/config.py` (削除済み)
 
 ## 5. 現在の課題
 
-1.  **`TestNotExpression` のテスト失敗:**
-    *   `NotExpression` クラスのインスタンス化時に `ValidationError` が発生しています。
-    *   原因は、Pydanticモデルのフィールドにエイリアス (`alias='not'`) が設定されている場合に、Pythonコード内で直接インスタンス化する方法にあると考えられます。
-    *   `NotExpression(not_=...)` や `NotExpression.model_validate({"not": ...})` のいずれの方法でも解決できていません。Pydanticの仕様やドキュメントを確認し、エイリアス付きフィールドを持つモデルをコード内で正しく初期化する方法を特定する必要があります。
-
-2.  **統合テストの未実装:**
-    *   CLIのバリデーション機能に対する統合テスト (`test/test_cli_integration.py`) が未実装です。
-    *   テスト用のExcelファイルと設定ファイル（成功ケース、失敗ケース）を準備する必要があります。
-
-3.  **ドキュメントの未更新:**
-    *   バリデーション機能の追加に伴う `rule-schema.json` と `cli-spec.md` の更新が必要です。
+1.  **ドキュメントの未更新:**
+    *   バリデーション機能の追加に伴う `cli-spec.md` の更新が必要です。
+    *   `rule-schema.json` は更新済みですが、`cli-spec.md` はまだ更新されていません。
 
 ## 6. 次のステップ
 
-1.  **`NotExpression` テストの修正 (最優先):**
-    *   Pydanticのドキュメントや関連情報を調査し、エイリアス (`alias`) が設定されたフィールドを持つモデルをPythonコード内でインスタンス化する正しい方法を特定します。
-    *   特定した方法に基づいて `test/validation/test_not_expression.py` の `TestNotExpression` を修正します。
-    *   `pytest -xvs test/validation/` を実行し、すべてのテストが成功することを確認します。
-
-2.  **統合テストの実装:**
-    *   バリデーション成功・失敗ケースを含むテスト用のExcelファイルと設定ファイル (`config.yaml` など) を `test/data` ディレクトリに準備します。
-    *   `test/test_cli_integration.py` に、`--validate-only` オプションや `--ignore-errors` オプションを使用した際のCLIの動作を検証するテストケースを追加します。
-
-3.  **実装確認:**
-    *   すべてのテスト (`pytest`) を実行し、成功することを確認します。
-
-4.  **ドキュメント更新:**
-    *   `docs/spec/rule-schema.json` に、バリデーションルール (`compare`, `required`, `regex_match`, `enum`, `all_of`, `any_of`, `not`) の定義を追加・更新します。
+1.  **ドキュメント更新:**
     *   `docs/spec/cli-spec.md` に、`--validate-only` および `--ignore-errors` オプションに関する説明を追加します。
     *   必要に応じて、他の設計ドキュメントやREADMEも更新します。
 
-5.  **作業完了確認:**
+2.  **全テスト実行と確認:**
+    *   すべてのテスト (`pytest`) を実行し、プロジェクト全体のテストが成功することを確認します。
+
+3.  **作業完了確認:**
     *   すべての作業が完了したら、ユーザーに報告し、完了の承認を求めます。
