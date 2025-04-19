@@ -268,6 +268,8 @@ xlsx-value-picker --config sample_template_file.yaml --output report.md
 
 ## 開発者向けガイド
 
+詳細な開発ガイドライン、プロジェクトの設計、仕様については `docs/` ディレクトリ、特に [`docs/README.md`](docs/README.md) を参照してください。
+
 ### セットアップ
 
 1. **uvのインストール**
@@ -276,32 +278,28 @@ xlsx-value-picker --config sample_template_file.yaml --output report.md
    ```
 
 2. **依存パッケージのインストール**
-   ```
-   uv pip install -r pyproject.toml
-   ```
-   または
-   ```
-   uv add openpyxl pyyaml jinja2
-   ```
-
-3. **開発用依存（テスト）**
-   ```
-   uv add pytest --dev
+   プロジェクトルートで以下のコマンドを実行し、必要な依存関係をインストールします。
+   ```bash
+   # 開発用依存を含むすべての依存関係をインストール・同期
+   uv sync --all-extras
    ```
 
 ### ビルド・実行
 
-- 実装は `xlsx_value_picker` パッケージに集約されています。
+- 実装は `src/xlsx_value_picker` パッケージに集約されています。
 - コマンド例:
-  ```
-  uv run python -m xlsx_value_picker --config config.yaml --output result.json
+  ```bash
+  # モジュールとして実行
+  python -m xlsx_value_picker --config config.yaml --output result.json
+  # またはインストール後にコマンドとして実行
+  xlsx-value-picker --config config.yaml --output result.json
   ```
 
 ### テスト
 
-- テストは `test_main.py` と `test_template.py` に記述されています。
+- テストは `test/` ディレクトリに配置されています。
 - 実行方法:
-  ```
+  ```bash
   uv run pytest
   ```
 

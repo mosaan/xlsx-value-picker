@@ -8,7 +8,6 @@ xlsx-value-pickerプロジェクトは、Excelファイルからの値取得、�
 
 **プロジェクト文書**:
 - [要件定義書](project/requirements.md): 作成済み
-- [ディレクトリ構造定義](project/directory-structure.md): 作成済み
 - [技術選定ドキュメント](project/technology-selection.md): 作成済み
 
 **仕様文書**:
@@ -21,12 +20,19 @@ xlsx-value-pickerプロジェクトは、Excelファイルからの値取得、�
 
 **ガイドライン**:
 - [Mermaidスタイルガイド](guide/mermaid-style-guide.md): 作成済み
+- [ディレクトリ構造ガイドライン](guide/directory-structure-guideline.md): 作成済み
+- [バージョン管理ガイドライン](guide/version-control-guideline.md): 作成済み
+- [依存関係管理ガイドライン](guide/dependency-management-guideline.md): 作成済み
 
-**タスク記録**:
-- [CLI実装計画](task_log/cli-implementation-plan.md): 作成済み。廃止予定。
-- [Expression型認識問題修正](task_log/expression-type-recognition-fix.md): 作成済み。問題が解決済み。
-- [ドキュメント整理計画](task_log/document-reorganization.md): 作成済み。実施中。
-- [ドキュメント再編計画](task_log/document-genre-reorganization.md): 作成済み。実施中。
+**タスク記録**: (完了済みのタスク)
+- CLI実装計画
+- Expression型認識問題修正
+- ドキュメント整理計画
+- ドキュメント再編計画（ジャンル別）
+- Mermaid図修正
+- テスト実行計画
+- テスト実装計画
+- CLI統合計画
 
 ### 1.2 実装状況
 
@@ -145,4 +151,4 @@ xlsx-value-pickerプロジェクトは、Excelファイルからの値取得、�
 
 ---
 
-最終更新日: 2025年4月19日
+最終更新日: 2025年4月19日 (ドキュメント構成更新反映)
