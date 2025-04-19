@@ -51,14 +51,18 @@
     - 依存関係管理ガイドライン: 開発依存の定義場所 (`[dependency-groups]`)、ロックファイル更新コマンド (`uv sync`) を修正。
 - ユーザーにより、依存関係管理ガイドラインにUVコマンド利用の推奨に関する情報が追記された。
 - 古い `docs/project/directory-structure.md` を削除した。
+- ルート `README.md` のコマンド実行例、開発者向けセットアップ手順を更新し、`docs/README.md` へのリンクを追加した。
+- `docs/project-status.md` のドキュメント整備状況を更新し、古いディレクトリ構造定義へのリンクを削除、新しいガイドラインへのリンクを追加した。
+- `docs/README.md` のドキュメント構成説明と配置ガイドラインを最新の状態に更新した。
 
 ## 成果物
 
 -   `docs/guide/directory-structure-guideline.md` (更新済み)
 -   `docs/guide/version-control-guideline.md` (更新済み)
 -   `docs/guide/dependency-management-guideline.md` (更新済み)
--   `README.md` (更新)
--   `docs/project-status.md` (更新)
+-   `README.md` (更新済み)
+-   `docs/project-status.md` (更新済み)
+-   `docs/README.md` (更新済み)
 
 ## 懸念事項
 
