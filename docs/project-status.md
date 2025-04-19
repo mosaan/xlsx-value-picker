@@ -12,8 +12,9 @@ xlsx-value-pickerプロジェクトは、Excelファイルからの値取得、�
 - [プロジェクト現状文書](project-status.md): 作成済み。随時更新。
 - [バリデーション設計ドキュメント](validation-design.md): 作成済み
 - [Mermaidスタイルガイド](mermaid-style-guide.md): 作成済み
-- [CLI実装計画](cli-implementation-plan.md): 作成済み。廃止予定。
-- [Expression型認識問題修正](expression-type-recognition-fix.md): 作成済み。問題が解決済み。
+- [CLI実装計画](task_log/cli-implementation-plan.md): 作成済み。廃止予定。
+- [Expression型認識問題修正](task_log/expression-type-recognition-fix.md): 作成済み。問題が解決済み。
+- [ドキュメント整理計画](task_log/document-reorganization.md): 作成済み。実施中。
 
 ### 1.2 実装状況
 
