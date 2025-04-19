@@ -1,8 +1,8 @@
-import argparse  # noqa: E402
 import json
 import sys
 from pathlib import Path
 
+import click
 import openpyxl  # noqa: F401
 import yaml
 from pydantic import TypeAdapter
@@ -20,74 +20,28 @@ def load_config(config_path: str | Path) -> Config:
     return TypeAdapter(Config).validate_python(raw)
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser(description="Excel値取得ツール")
-    parser.add_argument("excel", nargs="?", help="Excelファイルパス（コマンドライン優先）")
-    parser.add_argument("-c", "--config", default="config.yaml", help="設定ファイルパス")
-    parser.add_argument("-o", "--output", help="出力ファイルパス（未指定時は標準出力）")
-    parser.add_argument(
-        "--include-empty-range-row", action="store_true", help="range指定で全列がNoneの行も出力に含める"
-    )
-    args = parser.parse_args()
-
-    if not Path(args.config).exists():
-        print(f"設定ファイルが見つかりません: {args.config}", file=sys.stderr)
-        sys.exit(1)
-    config: Config = load_config(args.config)
-    excel_file = args.excel if args.excel else config.excel_file
-    value_specs = config.values
-
-    if not excel_file:
-        print(
-            "Excelファイルが指定されていません（コマンドラインまたは設定ファイルで指定してください）", file=sys.stderr
-        )
-        sys.exit(1)
-    if not Path(excel_file).exists():
-        print(f"Excelファイルが見つかりません: {excel_file}", file=sys.stderr)
-        sys.exit(1)
-
-    results = get_excel_values(excel_file, value_specs, include_empty_range_row=args.include_empty_range_row)
-
-    # 出力形式は設定ファイルから決定
-    output_format = config.output.format
-
-    # 出力形式に応じて処理を分岐
-    if output_format == "jinja2":
-        if not config.output.template and not config.output.template_file:
-            print("Jinja2形式の出力には、設定ファイルでtemplate_fileまたはtemplateを指定してください", file=sys.stderr)
-            sys.exit(1)
-
-        # テンプレートをレンダリング
-        try:
-            output_text = render_template(
-                data=results, template_string=config.output.template, template_file=config.output.template_file
-            )
-        except ValueError as e:
-            print(f"テンプレートレンダリングエラー: {str(e)}", file=sys.stderr)
-            sys.exit(1)
-
-        # 出力先に応じて処理
-        if args.output:
-            with open(args.output, "w", encoding="utf-8") as f:
-                f.write(output_text)
-            print(f"出力完了: {args.output}")
-        else:
-            print(output_text)
-    else:
-        # 既存の JSON/YAML 出力処理
-        if args.output:
-            with open(args.output, "w", encoding="utf-8") as f:
-                if output_format == "json":
-                    json.dump(results, f, ensure_ascii=False, indent=2)
-                else:
-                    yaml.dump(results, f, allow_unicode=True, sort_keys=False)
-            print(f"出力完了: {args.output}")
-        else:
-            if output_format == "json":
-                json.dump(results, sys.stdout, ensure_ascii=False, indent=2)
-                print()  # 改行
-            else:
-                yaml.dump(results, sys.stdout, allow_unicode=True, sort_keys=False)
+@click.command()
+@click.argument('input_file', type=click.Path(exists=True, file_okay=True, dir_okay=False))
+@click.option('-c', '--config', default='config.yaml', help='検証ルールや設定を記述した設定ファイル')
+@click.option('--ignore-errors', is_flag=True, help='検証エラーが発生しても処理を継続します')
+@click.option('-o', '--output', help='JSONデータの出力先ファイルを指定します')
+@click.option('--log', help='検証エラーを記録するログファイルを指定します')
+@click.option('--format', 'output_format', type=click.Choice(['json', 'yaml', 'jinja2']), help='出力フォーマットを指定します')
+@click.option('--template', help='Jinja2テンプレートを使用して出力をカスタマイズします')
+@click.option('--include-empty-range-row', is_flag=True, help='range指定で全列がNoneの行も出力に含めます')
+@click.version_option(version='0.1.0')
+def main(input_file, config, ignore_errors, output, log, output_format, template, include_empty_range_row):
+    """Excel検証およびJSON出力ツール"""
+    # スケルトン実装として入力値を表示するだけ
+    click.echo(f"入力ファイル: {input_file}")
+    click.echo(f"設定ファイル: {config}")
+    click.echo(f"エラー無視: {ignore_errors}")
+    click.echo(f"出力ファイル: {output}")
+    click.echo(f"ログファイル: {log}")
+    click.echo(f"フォーマット: {output_format}")
+    click.echo(f"テンプレート: {template}")
+    click.echo(f"空行を含める: {include_empty_range_row}")
+    click.echo("Hello World")
 
 
 if __name__ == "__main__":
