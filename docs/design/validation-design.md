@@ -47,177 +47,247 @@ flowchart TD
 
 上記の図に示すように、設定ファイルはバリデーションルールの定義だけでなく、セル値取得のための参照先定義（フィールドとセル位置のマッピングなど）も含んでいるため、セル値取得コンポーネントへの入力としても機能します。
 
-## 3. バリデーションルールの内部表現
+## 3. バリデーションルールの内部表現 (Pydanticモデル)
 
-### 3.1 ルール定義の基本構造
+バリデーションルールは、設定ファイルの構造を反映したPydanticモデルとして表現します。これらのモデルは、設定データの構造定義と検証ロジックの実行の両方を担います。
 
-バリデーションルールはPythonのクラス階層として実装します。基本となるルールインターフェースと、それを実装する各種ルールクラスを定義します。
+### 3.1 基本的なデータクラス
 
 ```python
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union # Unionを追加
+
+from pydantic import BaseModel # BaseModelを使用
 
 @dataclass
 class ValidationContext:
-    """バリデーション実行時のコンテキスト情報"""
-    cell_values: Dict[str, Any]  # フィールド名とその値のマッピング
-    field_locations: Dict[str, str]  # フィールド名とセル位置のマッピング
+    # ... (変更なし) ...
 
 @dataclass
 class ValidationResult:
-    """バリデーション結果"""
-    is_valid: bool
-    error_message: Optional[str] = None
-    error_fields: List[str] = None
-
-class Rule(ABC):
-    """すべてのルールの基底クラス"""
-    
-    @abstractmethod
-    def validate(self, context: ValidationContext) -> ValidationResult:
-        """ルールの検証を行い結果を返す"""
-        pass
+    # ... (変更なし) ...
 ```
 
-### 3.2 各種ルールの実装
+### 3.2 ルール式モデル (Pydantic)
 
-各種ルールは以下のように定義します：
+各種ルール式は、PydanticのBaseModelを継承したクラスとして定義します。これらのモデルは、設定ファイル内の式定義に対応し、`validate` メソッドによって実際の検証ロジックを実行します。
 
 ```python
-@dataclass
-class CompareRule(Rule):
-    """値の比較を行うルール"""
-    left: str
-    operator: str  # "==", "!=", ">", ">=", "<", "<="
-    right: Any
-    error_message: str
+class Expression(BaseModel, ABC):
+    """すべてのルール式モデルの基底クラス"""
 
-    def validate(self, context: ValidationContext) -> ValidationResult:
-        # 実装省略
+    @abstractmethod
+    def validate(self, context: ValidationContext, error_message_template: str) -> ValidationResult:
+        """ルール式の検証を行い結果を返す"""
         pass
 
-@dataclass
-class RequiredRule(Rule):
-    """必須項目を検証するルール"""
+class CompareExpression(Expression):
+    """比較式モデル"""
+    compare: Dict[str, Any]
+
+    def validate(self, context: ValidationContext, error_message_template: str) -> ValidationResult:
+        left_field = self.compare['left']
+        operator = self.compare['operator']
+        right_value = self.compare['right']
+        left_value = context.get_field_value(left_field)
+
+        # --- 比較ロジック ---
+        is_valid = False
+        try:
+            if operator == "==":
+                is_valid = (left_value == right_value)
+            elif operator == "!=":
+                is_valid = (left_value != right_value)
+            # ... 他の演算子 ...
+            # 型が異なる場合の比較など、詳細なロジックは実装時に検討
+        except TypeError:
+             # 比較不能な型の場合などはエラーとするか、仕様に応じてハンドリング
+             pass # 例: is_valid = False のまま
+
+        if is_valid:
+            return ValidationResult(is_valid=True)
+        else:
+            # エラーメッセージを組み立てる (テンプレートを使用)
+            msg = error_message_template.format(
+                left_field=left_field,
+                left_value=left_value,
+                operator=operator,
+                right_value=right_value
+            )
+            return ValidationResult(is_valid=False, error_message=msg, error_fields=[left_field])
+
+class RequiredExpression(Expression):
+    """必須項目式モデル"""
     field: str
-    error_message: str
+    required: bool = True # スキーマ定義に合わせてフィールドを持つ
 
-    def validate(self, context: ValidationContext) -> ValidationResult:
-        # 実装省略
-        pass
+    def validate(self, context: ValidationContext, error_message_template: str) -> ValidationResult:
+        target_field = self.field
+        value = context.get_field_value(target_field)
 
-@dataclass
-class AnyOfRule(Rule):
-    """いずれかのルールが成立するかを検証するルール"""
-    rules: List[Rule]
-    error_message: str
+        # --- 必須チェックロジック ---
+        # required=True の場合のみチェック (Falseの場合は常にTrue)
+        is_valid = not self.required or (value is not None and value != "") # 空文字列もNGとする例
 
-    def validate(self, context: ValidationContext) -> ValidationResult:
-        # 実装省略
-        pass
+        if is_valid:
+            return ValidationResult(is_valid=True)
+        else:
+            msg = error_message_template.format(field=target_field)
+            return ValidationResult(is_valid=False, error_message=msg, error_fields=[target_field])
 
-# その他のルールクラスも同様に定義
+# --- 複合ルール式モデル ---
+# 前方参照とUnion型 (ExpressionType) を利用 (config_loader.py で定義済み想定)
+# from .config_loader import ExpressionType
+
+class AnyOfExpression(Expression):
+    """いずれかの条件一致式モデル"""
+    any_of: List['ExpressionType'] # 型ヒントにUnion型を使用
+
+    def validate(self, context: ValidationContext, error_message_template: str) -> ValidationResult:
+        # --- いずれか一つでも valid なら valid ---
+        sub_results = [sub_expr.validate(context, "") for sub_expr in self.any_of] # サブルールのエラーメッセージは使わない
+
+        if any(r.is_valid for r in sub_results):
+            return ValidationResult(is_valid=True)
+        else:
+            # すべて失敗した場合、親のエラーメッセージを使用
+            # 必要に応じて、失敗したサブルールの情報を集約することも検討
+            all_error_fields = list(set(field for r in sub_results if r.error_fields for field in r.error_fields))
+            msg = error_message_template # そのまま使うか、詳細情報を付加するか
+            return ValidationResult(is_valid=False, error_message=msg, error_fields=all_error_fields)
+
+# --- 他のルール式モデル (AllOfExpression, NotExpression, RegexMatchExpression, EnumExpression など) も同様に定義 ---
+# class AllOfExpression(Expression): ...
+# class NotExpression(Expression): ...
+
+# --- ExpressionType Union ---
+# config_loader.py などで定義される想定
+# ExpressionType = Union[CompareExpression, RequiredExpression, AnyOfExpression, AllOfExpression, NotExpression, ...]
+
 ```
 
-## 4. ルール定義のパース処理
+### 3.3 ルール全体モデル (Pydantic)
 
-設定ファイル（YAML/JSON）からルールオブジェクトへの変換を行うパーサーを実装します。
+個々のルール定義全体を表すモデル。ルール名、適用する式モデル (`ExpressionType`)、エラーメッセージを持ちます。
 
-### 4.1 ルール定義スキーマ
+```python
+class RuleModel(BaseModel):
+    """バリデーションルール全体を表すモデル"""
+    name: str
+    expression: 'ExpressionType' # Union型を使用
+    error_message: str
+
+    def validate(self, context: ValidationContext) -> ValidationResult:
+        """
+        ルールに定義された式モデルの検証を実行する
+        """
+        # expressionオブジェクトの検証メソッドを呼び出し、自身のエラーメッセージテンプレートを渡す
+        result = self.expression.validate(context, self.error_message)
+        # 必要に応じて、ルール名などの情報を結果に追加することも可能
+        # if not result.is_valid:
+        #    result.rule_name = self.name
+        return result
+
+# --- ConfigModel ---
+# config_loader.py などで定義される想定
+# class ConfigModel(BaseModel):
+#    fields: Dict[str, str]
+#    rules: List[RuleModel]
+#    output: OutputFormat
+```
+
+## 4. ルール定義のパースとオブジェクト生成 (Pydantic中心)
+
+設定ファイル（YAML/JSON）からバリデーションルールを読み込み、検証ロジックを持つPydanticモデルオブジェクトへ変換するプロセスは、Pydanticの機能を最大限に活用して行われます。
+
+1.  **設定ファイルのパースとPydanticモデルへの変換 (Pydanticの自動処理):**
+    *   設定ファイルパーサーが、YAMLまたはJSON形式の設定ファイルを読み込み、Pythonの辞書に変換します。
+    *   Pydanticモデル (`ConfigModel`) を使用して、辞書データを検証し、型付けされたオブジェクトに変換します。この際、JSONスキーマに基づいた検証もPydanticのバリデーション機能や外部ライブラリ連携によって行われることが望ましいです。
+    *   `ConfigModel` には、ルール定義 (`rules` フィールド) が含まれ、各ルールは `RuleModel` として表現されます。
+    *   `RuleModel` 内のルール式 (`expression` フィールド) は、様々なバリデーション式に対応するPydanticモデル (`CompareExpression`, `RequiredExpression`, `AnyOfExpression` など) の **Union型 (`ExpressionType`)** として定義されます。
+    *   これにより、Pydanticは設定データを読み込む際に、**自動的に適切な式モデルを判別し、インスタンス化**します。複雑なルール構造のパースと型解決の大部分は、この段階でPydanticによって処理されます。
+
+2.  **検証ロジックの実行:**
+    *   Pydanticによって生成された `ConfigModel` オブジェクトには、`rules` リスト内に `RuleModel` のインスタンスが含まれています。
+    *   各 `RuleModel` インスタンス、およびその内部の `expression` (各式モデルインスタンス) は、セクション3で定義された `validate` メソッドを持っています。
+    *   バリデーション実行エンジン (セクション5) は、これらの `validate` メソッドを直接呼び出すことで、設定に基づいた検証を実行します。
+    *   **別途ファクトリを用意して実行可能なオブジェクトに変換する必要はありません。** Pydanticモデルがデータ構造定義と検証ロジック実行の両方を担います。
+
+### 4.1 ルール定義スキーマ (YAML例)
 
 ```yaml
-# 設定ファイル構造の例
-fields:  # セル値取得のためのマッピング定義
-  animal_select: Sheet1!B5
-  animal_free_text: Sheet1!D5
-  email: Sheet1!E5
-  product_code: Sheet2!A1
-  quantity: Sheet2!B1
+# 設定ファイル構造の例 (再掲)
+fields:
+  # ... (フィールド定義)
 
-rules:  # バリデーションルール定義
+rules:  # バリデーションルール定義 (RuleModelリストに対応)
   - name: "その他選択時の自由記入必須"
-    expression:
-      any_of:
-        - compare:
+    expression: # ExpressionTypeに対応 (Pydanticが自動判別)
+      any_of: # AnyOfExpressionに対応
+        - compare: # CompareExpressionに対応
             left: "animal_select"
             operator: "!="
             right: "その他"
-        - field:
-            name: "animal_free_text"
-            required: true
-    error_message: "「その他」を選んだ場合は内容を記入してください。"
+        - required: # RequiredExpressionに対応 (※スキーマ定義は実装と整合させる必要あり)
+            field: "animal_free_text"
+            # required: true # requiredフィールドはモデル定義でデフォルトTrue想定
+    error_message: "「{field}」は、「その他」を選んだ場合に必須です。" # メッセージテンプレート例
 
-output:  # 出力設定
-  format: "json"  # "json", "yaml", "jinja2"
-  template_file: "template.j2"  # テンプレート使用時のファイルパス
+output:
+  # ... (出力設定)
 ```
+*(注: スキーマ定義と、それを解釈するPydanticモデルは整合している必要があります。)*
 
-### 4.2 パーサーの実装方針
+### 4.2 パーサー/モデルの責務 (Pydantic中心)
 
-1. YAMLファイルを読み込む
-2. スキーマに従って各ルールを適切なルールオブジェクトに変換
-3. 複合ルール（any_of, all_ofなど）は再帰的に処理
-
-```python
-def parse_rule(rule_def: Dict[str, Any]) -> Rule:
-    """
-    ルール定義からRuleオブジェクトを作成
-    """
-    expr = rule_def["expression"]
-    error_message = rule_def.get("error_message", "検証エラーが発生しました")
-    
-    # 式タイプに応じて適切なルールを作成
-    if "compare" in expr:
-        compare_def = expr["compare"]
-        return CompareRule(
-            left=compare_def["left"],
-            operator=compare_def["operator"],
-            right=compare_def["right"],
-            error_message=error_message
-        )
-    elif "field" in expr and expr["field"].get("required"):
-        return RequiredRule(
-            field=expr["field"]["name"],
-            error_message=error_message
-        )
-    # 他のルールタイプも同様に処理
-    
-    raise ValueError(f"サポートされていない式タイプです: {expr}")
-```
+*   **パーサー/Pydanticモデル:** 設定ファイルを読み込み、スキーマに基づいて検証し、**型付けされたPydanticモデル (`ConfigModel`, `RuleModel`, `ExpressionType`) を生成する**責務を負います。**パースと型解決の大部分を自動化**し、さらに**検証ロジックの実行**も担います。
 
 ## 5. バリデーション実行エンジン
 
-バリデーションエンジンは、以下の処理を行います：
+バリデーションエンジンは、Pydanticによって生成された設定モデル (`ConfigModel`) を利用して、以下の処理を行います：
 
 1. Excelファイルからセル値を取得
-2. バリデーションコンテキストを構築
-3. 定義されたすべてのルールを評価
-4. バリデーション結果を収集・整理
+2. バリデーションコンテキスト (`ValidationContext`) を構築
+3. `ConfigModel` 内の各 `RuleModel` の `validate` メソッドを呼び出し、ルールを評価
+4. バリデーション結果 (`ValidationResult`) を収集・整理
 
 ```python
+# Pydanticモデル (config_loader.pyなどで定義済み想定)
+# from .config_loader import ConfigModel, RuleModel
+
 @dataclass
 class ValidationEngine:
-    rules: List[Rule]
-    
-    def validate(self, excel_file: str, field_mapping: Dict[str, str]) -> List[ValidationResult]:
-        # Excelから値を取得
+    # config_model: ConfigModel # エンジンがConfigModel全体を持つか、rulesだけ持つかは設計次第
+    rules: List[RuleModel] # RuleModelのリストを持つ
+
+    # --- コンストラクタなどで rules を受け取る ---
+    # def __init__(self, config_model: ConfigModel):
+    #     self.rules = config_model.rules
+
+    def validate(self, excel_file: str, field_mapping: Dict[str, str]) -> List<ValidationResult>:
+        # Excelから値を取得 (別途実装)
         cell_values = get_excel_values(excel_file, field_mapping)
-        
+
         # コンテキストを構築
         context = ValidationContext(
             cell_values=cell_values,
             field_locations=field_mapping
         )
-        
-        # すべてのルールを評価
+
+        # すべてのルールモデルの validate メソッドを評価
         results = []
-        for rule in self.rules:
-            result = rule.validate(context)
+        for rule in self.rules: # rule は RuleModel のインスタンス
+            result = rule.validate(context) # RuleModelのvalidateを呼び出す
             if not result.is_valid:
                 results.append(result)
-                
+
         return results
+
+# --- Excel値取得関数のイメージ ---
+# def get_excel_values(excel_file: str, field_mapping: Dict[str, str]) -> Dict[str, Any]:
+#    # ... excel_processor.py の機能を利用 ...
+#    pass
 ```
 
 ## 6. CLI統合

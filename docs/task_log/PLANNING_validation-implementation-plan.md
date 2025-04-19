@@ -8,8 +8,8 @@
 
 -   [バリデーションエンジンの設計ドキュメント](../design/validation-design.md)
 -   [JSONスキーマに基づく設定データ読み込み機能の設計](../design/config-loader-design.md)
--   [設定ファイル仕様](../../spec/rule-schema.json) (※バリデーションルールに関する定義を追記する必要がある)
--   [CLI仕様](../../spec/cli-spec.md) (※バリデーション関連オプションを追記する必要がある)
+-   [設定ファイル仕様](../spec/rule-schema.json) (※バリデーションルールに関する定義を追記する必要がある)
+-   [CLI仕様](../spec/cli-spec.md) (※バリデーション関連オプションを追記する必要がある)
 
 ## 3. 作業ステップ
 
