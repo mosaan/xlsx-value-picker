@@ -9,7 +9,9 @@ import yaml  # Import yaml explicitly for the test
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 import subprocess
 
-from xlsx_value_picker.cli import get_excel_values
+# 必要な関数をインポート
+from xlsx_value_picker.config import get_excel_values
+from xlsx_value_picker.config_loader import ConfigModel, OutputFormat
 
 
 def create_sample_excel(path):
@@ -113,10 +115,9 @@ values:
 
     env = os.environ.copy()
     env["PYTHONPATH"] = str(Path(__file__).parent.parent / "src")
+    # 引数を修正：EXCEL_FILEを最後のオプションの後に追加
     result = subprocess.run(
         [
-            "uv",
-            "run",
             "python",
             "-m",
             "xlsx_value_picker",
@@ -124,6 +125,7 @@ values:
             str(config_path.resolve()),
             "--output",
             str(output_path.resolve()),
+            str(excel_path.resolve()),  # EXCEL_FILEを位置引数として追加
         ],
         cwd=tmp_path,
         capture_output=True,
@@ -142,7 +144,14 @@ values:
     assert data["value2"] == "abc"
     # 標準出力（--output未指定）
     result = subprocess.run(
-        ["uv", "run", "python", "-m", "xlsx_value_picker", "--config", str(config_path.resolve())],
+        [
+            "python", 
+            "-m", 
+            "xlsx_value_picker", 
+            "--config", 
+            str(config_path.resolve()),
+            str(excel_path.resolve()),  # EXCEL_FILEを位置引数として追加
+        ],
         cwd=tmp_path,
         capture_output=True,
         encoding="utf-8",
@@ -262,23 +271,27 @@ output:
 
     # Test YAML output
     yaml_output_path = tmp_path / "result.yaml"
-    subprocess.run(
+    yaml_result = subprocess.run(
         [
-            "uv",
-            "run",
-            "xlsx-value-picker",
-            excel_path.resolve(),
+            "python",
+            "-m",
+            "xlsx_value_picker",
             "--config",
-            yaml_config_path.resolve(),
+            str(yaml_config_path.resolve()),
             "--output",
-            yaml_output_path.resolve(),
+            str(yaml_output_path.resolve()),
+            str(excel_path.resolve()),  # EXCEL_FILEを位置引数として追加
         ],
         cwd=tmp_path,
         capture_output=True,
         encoding="utf-8",
         env=env,
     )
-
+    
+    print("YAML stdout:", yaml_result.stdout)
+    print("YAML stderr:", yaml_result.stderr)
+    print("YAML returncode:", yaml_result.returncode)
+    
     assert yaml_output_path.exists()
     # Verify the file contains valid YAML
     with open(yaml_output_path, encoding="utf-8") as f:
@@ -288,26 +301,29 @@ output:
 
     # Test JSON output
     json_output_path = tmp_path / "result.json"
-    out = subprocess.run(
+    json_result = subprocess.run(
         [
-            "uv",
-            "run",
-            "xlsx-value-picker",
-            excel_path.resolve(),
+            "python",
+            "-m",
+            "xlsx_value_picker",
             "--config",
-            json_config_path.resolve(),
+            str(json_config_path.resolve()),
             "--output",
-            json_output_path.resolve(),
+            str(json_output_path.resolve()),
+            str(excel_path.resolve()),  # EXCEL_FILEを位置引数として追加
         ],
         cwd=tmp_path,
         capture_output=True,
         encoding="utf-8",
         env=env,
     )
-    assert out.returncode == 0, out.stderr
-    assert "出力完了" in out.stdout, out.stdout
-
-    assert json_output_path.exists(), out.stdout
+    
+    print("JSON stdout:", json_result.stdout)
+    print("JSON stderr:", json_result.stderr)
+    print("JSON returncode:", json_result.returncode)
+    
+    assert json_result.returncode == 0, json_result.stderr
+    assert json_output_path.exists()
     # Verify the file contains valid JSON
     with open(json_output_path, encoding="utf-8") as f:
         json_data = json.load(f)

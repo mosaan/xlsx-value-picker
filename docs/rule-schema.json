@@ -15,7 +15,7 @@
         "type": "object",
         "properties": {
           "name": { "type": "string" },
-          "expression": { "$ref": "#/definitions/Expression" },
+          "expression": { "$ref": "#/$defs/Expression" },
           "error_message": { "type": "string" }
         },
         "required": ["name", "expression", "error_message"]
@@ -27,13 +27,13 @@
     "Expression": {
       "type": "object",
       "oneOf": [
-        { "$ref": "#/definitions/CompareExpression" },
-        { "$ref": "#/definitions/RequiredExpression" },
-        { "$ref": "#/definitions/RegexMatchExpression" },
-        { "$ref": "#/definitions/EnumExpression" },
-        { "$ref": "#/definitions/AllOfExpression" },
-        { "$ref": "#/definitions/AnyOfExpression" },
-        { "$ref": "#/definitions/NotExpression" }
+        { "$ref": "#/$defs/CompareExpression" },
+        { "$ref": "#/$defs/RequiredExpression" },
+        { "$ref": "#/$defs/RegexMatchExpression" },
+        { "$ref": "#/$defs/EnumExpression" },
+        { "$ref": "#/$defs/AllOfExpression" },
+        { "$ref": "#/$defs/AnyOfExpression" },
+        { "$ref": "#/$defs/NotExpression" }
       ]
     },
     "CompareExpression": {
@@ -100,7 +100,7 @@
       "properties": {
         "all_of": {
           "type": "array",
-          "items": { "$ref": "#/definitions/Expression" }
+          "items": { "$ref": "#/$defs/Expression" }
         }
       },
       "required": ["all_of"]
@@ -110,7 +110,7 @@
       "properties": {
         "any_of": {
           "type": "array",
-          "items": { "$ref": "#/definitions/Expression" }
+          "items": { "$ref": "#/$defs/Expression" }
         }
       },
       "required": ["any_of"]
@@ -118,7 +118,7 @@
     "NotExpression": {
       "type": "object",
       "properties": {
-        "not": { "$ref": "#/definitions/Expression" }
+        "not": { "$ref": "#/$defs/Expression" }
       },
       "required": ["not"]
     }
