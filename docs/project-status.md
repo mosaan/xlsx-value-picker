@@ -23,6 +23,7 @@ xlsx-value-pickerプロジェクトは、Excelファイルからの値取得、�
 - [ディレクトリ構造ガイドライン](guide/directory-structure-guideline.md): 作成済み
 - [バージョン管理ガイドライン](guide/version-control-guideline.md): 作成済み
 - [依存関係管理ガイドライン](guide/dependency-management-guideline.md): 作成済み
+- [Pydanticモデル設計ガイドライン](guide/pydantic-model-design-guideline.md): 作成済み
 
 **タスク記録**: (完了済みのタスク)
 - CLI実装計画
@@ -130,7 +131,7 @@ xlsx-value-pickerプロジェクトは、Excelファイルからの値取得、�
 
 ## 4. 注意事項
 
-- **コードの品質と型安全性**: Pydanticモデルを活用した型安全な実装を心がけてください。Expression派生クラスのような複雑な型階層を扱う場合は特に注意が必要です。
+- **コードの品質と型安全性**: Pydanticモデルを活用した型安全な実装を心がけてください。詳細は [`guide/pydantic-model-design-guideline.md`](guide/pydantic-model-design-guideline.md) を参照してください。Expression派生クラスのような複雑な型階層を扱う場合は特に注意が必要です。
 
 - **互換性の維持**: 既存のAPIとの後方互換性を維持しながら機能拡張を行ってください。
 

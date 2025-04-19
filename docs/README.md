@@ -39,6 +39,7 @@
 - [ディレクトリ構造ガイドライン](./guide/directory-structure-guideline.md): プロジェクトのディレクトリ構造と役割
 - [バージョン管理ガイドライン](./guide/version-control-guideline.md): Git利用時のブランチ戦略やコミットルール
 - [依存関係管理ガイドライン](./guide/dependency-management-guideline.md): Pythonパッケージの依存関係管理ルール
+- [Pydanticモデル設計ガイドライン](./guide/pydantic-model-design-guideline.md): Pydanticモデルの設計方針に関するガイドライン
 
 #### タスク記録 (`task_log/`)
 
