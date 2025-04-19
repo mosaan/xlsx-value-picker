@@ -26,6 +26,14 @@ def create_test_excel(path):
     ws1["C3"] = "テスト"
     ws1["D4"] = None  # 空セル
     
+    # バリデーションテスト用
+    ws1["E1"] = "test@example.com"  # 有効なメールアドレス
+    ws1["E2"] = "invalid-email"     # 無効なメールアドレス
+    ws1["F1"] = 20                  # 有効な年齢
+    ws1["F2"] = 15                  # 無効な年齢
+    ws1["G1"] = "その他"            # 選択肢
+    ws1["G2"] = ""                  # 空（無効）
+    
     ws2 = wb.create_sheet("Sheet2")
     ws2["A1"] = "Sheet2値1"
     ws2["B2"] = "Sheet2値2"
@@ -92,6 +100,124 @@ def create_invalid_config_yaml(path):
         yaml.dump(config_data, f)
 
 
+def create_config_with_validation_yaml(path):
+    """バリデーションルールを含むYAML設定ファイルを作成する"""
+    config_data = {
+        "fields": {
+            "email": "Sheet1!E1",
+            "age": "Sheet1!F1",
+            "selection": "Sheet1!G1",
+            "comment": "Sheet1!G2"
+        },
+        "rules": [
+            {
+                "name": "メールアドレス形式チェック",
+                "expression": {
+                    "regex_match": {
+                        "field": "email",
+                        "pattern": r"^[\w.-]+@[\w.-]+\.\w+$"
+                    }
+                },
+                "error_message": "{field}の形式が不正です: {value}"
+            },
+            {
+                "name": "年齢チェック",
+                "expression": {
+                    "compare": {
+                        "left": "age",
+                        "operator": ">=",
+                        "right": 18
+                    }
+                },
+                "error_message": "{field}は18歳以上である必要があります（現在: {left_value}歳）"
+            },
+            {
+                "name": "その他選択時コメント必須",
+                "expression": {
+                    "any_of": [
+                        {
+                            "compare": {
+                                "left": "selection",
+                                "operator": "!=",
+                                "right": "その他"
+                            }
+                        },
+                        {
+                            "field": "comment",
+                            "required": True
+                        }
+                    ]
+                },
+                "error_message": "「その他」を選択した場合はコメントが必須です"
+            }
+        ],
+        "output": {
+            "format": "json"
+        }
+    }
+    with open(path, "w", encoding="utf-8") as f:
+        yaml.dump(config_data, f, allow_unicode=True)
+
+
+def create_config_with_failing_validation_yaml(path):
+    """バリデーションが失敗するYAML設定ファイルを作成する"""
+    config_data = {
+        "fields": {
+            "email": "Sheet1!E2",  # 無効なメールアドレス
+            "age": "Sheet1!F2",    # 無効な年齢
+            "selection": "Sheet1!G1",  # その他
+            "comment": "Sheet1!G2"    # 空
+        },
+        "rules": [
+            {
+                "name": "メールアドレス形式チェック",
+                "expression": {
+                    "regex_match": {
+                        "field": "email",
+                        "pattern": r"^[\w.-]+@[\w.-]+\.\w+$"
+                    }
+                },
+                "error_message": "{field}の形式が不正です: {value}"
+            },
+            {
+                "name": "年齢チェック",
+                "expression": {
+                    "compare": {
+                        "left": "age",
+                        "operator": ">=",
+                        "right": 18
+                    }
+                },
+                "error_message": "{field}は18歳以上である必要があります（現在: {left_value}歳）"
+            },
+            {
+                "name": "その他選択時コメント必須",
+                "expression": {
+                    "any_of": [
+                        {
+                            "compare": {
+                                "left": "selection",
+                                "operator": "!=",
+                                "right": "その他"
+                            }
+                        },
+                        {
+                            "field": "comment",
+                            "required": True
+                        }
+                    ]
+                },
+                "error_message": "「その他」を選択した場合はコメントが必須です"
+            }
+        ],
+        "output": {
+            "format": "json"
+        }
+    }
+    with open(path, "w", encoding="utf-8") as f:
+        yaml.dump(config_data, f, allow_unicode=True)
+
+
 def create_test_schema(path):
     """テスト用のスキーマファイルを作成する"""
     schema = {
@@ -146,16 +272,30 @@ class TestCLI:
         invalid_config_path = tmp_path / "invalid_config.yaml"
         create_invalid_config_yaml(invalid_config_path)
         
+        # バリデーションルール含む設定ファイル
+        validation_config_path = tmp_path / "validation_config.yaml"
+        create_config_with_validation_yaml(validation_config_path)
+        
+        # バリデーションが失敗する設定ファイル
+        failing_validation_config_path = tmp_path / "failing_validation_config.yaml"
+        create_config_with_failing_validation_yaml(failing_validation_config_path)
+        
         # スキーマファイル
         schema_path = tmp_path / "test_schema.json"
         create_test_schema(schema_path)
+        
+        # ログファイルパス
+        log_path = tmp_path / "validation_log.json"
         
         return {
             "excel_path": excel_path,
             "yaml_config_path": yaml_config_path,
             "json_config_path": json_config_path,
             "invalid_config_path": invalid_config_path,
-            "schema_path": schema_path
+            "validation_config_path": validation_config_path,
+            "failing_validation_config_path": failing_validation_config_path,
+            "schema_path": schema_path,
+            "log_path": log_path
         }
     
     def run_cli_command(self, args, cwd=None):
@@ -395,3 +535,142 @@ class TestCLI:
         assert result2.returncode == 0
         assert "設定ファイルの読み込みに失敗" in result2.stderr
         assert "--ignore-errors オプションが指定されたため" in result2.stderr
+    
+    def test_validation_success(self, setup_files):
+        """バリデーション成功時のテスト"""
+        excel_path = setup_files["excel_path"]
+        validation_config_path = setup_files["validation_config_path"]
+        
+        result = self.run_cli_command([
+            str(excel_path),
+            "--config", str(validation_config_path)
+        ])
+        
+        # 終了コードが0（正常終了）
+        assert result.returncode == 0
+        # 標準出力がJSON形式
+        try:
+            output_data = json.loads(result.stdout)
+            assert output_data["email"] == "test@example.com"
+            assert output_data["age"] == 20
+        except json.JSONDecodeError:
+            pytest.fail("標準出力がJSON形式ではありません")
+    
+    def test_validation_failure(self, setup_files):
+        """バリデーション失敗時のテスト"""
+        excel_path = setup_files["excel_path"]
+        failing_validation_config_path = setup_files["failing_validation_config_path"]
+        
+        result = self.run_cli_command([
+            str(excel_path),
+            "--config", str(failing_validation_config_path)
+        ])
+        
+        # 終了コードが1（エラー終了）
+        assert result.returncode == 1
+        # エラーメッセージにバリデーションエラーが含まれる
+        assert "バリデーションエラーが" in result.stderr
+        assert "emailの形式が不正です" in result.stderr
+        assert "ageは18歳以上である必要があります" in result.stderr
+        assert "「その他」を選択した場合はコメントが必須です" in result.stderr
+    
+    def test_validation_only_mode_success(self, setup_files):
+        """バリデーションのみモード成功時のテスト"""
+        excel_path = setup_files["excel_path"]
+        validation_config_path = setup_files["validation_config_path"]
+        
+        result = self.run_cli_command([
+            str(excel_path),
+            "--config", str(validation_config_path),
+            "--validate-only"
+        ])
+        
+        # 終了コードが0（正常終了）
+        assert result.returncode == 0
+        # 標準出力は空（バリデーションのみモードでは出力なし）
+        assert not result.stdout.strip()
+        # 標準エラー出力にバリデーション成功メッセージが含まれる
+        assert "バリデーションに成功しました" in result.stderr
+    
+    def test_validation_only_mode_failure(self, setup_files):
+        """バリデーションのみモード失敗時のテスト"""
+        excel_path = setup_files["excel_path"]
+        failing_validation_config_path = setup_files["failing_validation_config_path"]
+        
+        result = self.run_cli_command([
+            str(excel_path),
+            "--config", str(failing_validation_config_path),
+            "--validate-only"
+        ])
+        
+        # 終了コードが1（エラー終了）
+        assert result.returncode == 1
+        # 標準出力は空（バリデーションのみモードでは出力なし）
+        assert not result.stdout.strip()
+        # 標準エラー出力にバリデーションエラーが含まれる
+        assert "バリデーションエラーが" in result.stderr
+    
+    def test_validation_log_output(self, setup_files):
+        """バリデーションログ出力のテスト"""
+        excel_path = setup_files["excel_path"]
+        failing_validation_config_path = setup_files["failing_validation_config_path"]
+        log_path = setup_files["log_path"]
+        
+        result = self.run_cli_command([
+            str(excel_path),
+            "--config", str(failing_validation_config_path),
+            "--log", str(log_path)
+        ])
+        
+        # 終了コードが1（エラー終了）
+        assert result.returncode == 1
+        # ログファイルが存在する
+        assert Path(log_path).exists()
+        
+        # ログファイルの内容を検証
+        with open(log_path, "r", encoding="utf-8") as f:
+            log_data = json.load(f)
+            assert log_data["is_valid"] is False
+            assert "validation_results" in log_data
+            assert len(log_data["validation_results"]) > 0
+            assert log_data["error_count"] > 0
+            
+            # 少なくとも1つのバリデーション結果に適切な情報が含まれているか
+            result = log_data["validation_results"][0]
+            assert "is_valid" in result
+            assert "error_message" in result
+            assert "error_fields" in result
+            assert "error_locations" in result
+    
+    def test_ignore_errors_with_validation(self, setup_files):
+        """バリデーション失敗時のエラー無視オプションテスト"""
+        excel_path = setup_files["excel_path"]
+        failing_validation_config_path = setup_files["failing_validation_config_path"]
+        
+        # エラー無視なしの場合
+        result1 = self.run_cli_command([
+            str(excel_path),
+            "--config", str(failing_validation_config_path)
+        ])
+        
+        # 終了コードが1（エラー終了）
+        assert result1.returncode == 1
+        
+        # エラー無視ありの場合
+        result2 = self.run_cli_command([
+            str(excel_path),
+            "--config", str(failing_validation_config_path),
+            "--ignore-errors"
+        ])
+        
+        # 終了コードが0（正常終了）
+        assert result2.returncode == 0
+        # バリデーションエラーメッセージは表示される
+        assert "バリデーションエラーが" in result2.stderr
+        # エラー無視メッセージが表示される
+        assert "--ignore-errors オプションが指定されたため" in result2.stderr
+        # 出力データも取得できる
+        try:
+            json.loads(result2.stdout)
+        except json.JSONDecodeError:
+            pytest.fail("標準出力がJSON形式ではありません")

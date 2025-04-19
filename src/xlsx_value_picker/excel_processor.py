@@ -85,3 +85,25 @@ class ExcelValueExtractor:
     def close(self):
         """ワークブックを閉じる"""
         self.workbook.close()
+
+# ValidationEngine用の関数
+def get_excel_values(excel_file: str, field_mapping: Dict[str, str]) -> Dict[str, Any]:
+    """
+    Excelファイルからフィールドマッピングに基づいて値を取得する
+    
+    Args:
+        excel_file: Excelファイルのパス
+        field_mapping: フィールド名とセル位置のマッピング
+        
+    Returns:
+        Dict[str, Any]: フィールド名と値のマッピング
+    """
+    extractor = ExcelValueExtractor(excel_file)
+    try:
+        result = {}
+        for field_name, cell_ref in field_mapping.items():
+            value = extractor._get_cell_value(cell_ref)
+            result[field_name] = value
+        return result
+    finally:
+        extractor.close()

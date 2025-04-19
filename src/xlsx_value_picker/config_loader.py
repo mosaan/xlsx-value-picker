@@ -12,6 +12,8 @@ import jsonschema
 import yaml
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from .validation import IExpression, ValidationContext, ValidationResult
+
 
 class ConfigValidationError(Exception):
     """設定ファイルのバリデーションエラー"""
@@ -81,9 +83,25 @@ class SchemaValidator:
 
 # 以下はバリデーション式のモデル定義
 
-class Expression(BaseModel):
+class Expression(BaseModel, IExpression):
     """バリデーション式の基底クラス"""
-    pass
+    
+    def validate(self, context: ValidationContext, error_message_template: str) -> ValidationResult:
+        """
+        バリデーションを実行する（基底クラス実装）
+        
+        Note:
+            この基底クラスの実装は常に有効（True）を返します。
+            実際のバリデーションロジックは派生クラスで実装されます。
+        
+        Args:
+            context: バリデーションコンテキスト
+            error_message_template: エラーメッセージのテンプレート
+        
+        Returns:
+            ValidationResult: バリデーション結果
+        """
+        return ValidationResult(is_valid=True)
 
 
 class CompareExpression(Expression):
@@ -97,12 +115,92 @@ class CompareExpression(Expression):
         if v['operator'] not in ["==", "!=", ">", ">=", "<", "<="]:
             raise ValueError(f"無効な演算子です: {v['operator']}")
         return v
+    
+    def validate(self, context: ValidationContext, error_message_template: str) -> ValidationResult:
+        """
+        比較式のバリデーションを実行する
+        
+        Args:
+            context: バリデーションコンテキスト
+            error_message_template: エラーメッセージのテンプレート
+            
+        Returns:
+            ValidationResult: バリデーション結果
+        """
+        left_field = self.compare['left']
+        operator = self.compare['operator']
+        right_value = self.compare['right']
+        left_value = context.get_field_value(left_field)
+        
+        # 比較ロジック
+        is_valid = False
+        try:
+            if operator == "==":
+                is_valid = (left_value == right_value)
+            elif operator == "!=":
+                is_valid = (left_value != right_value)
+            elif operator == ">":
+                is_valid = (left_value > right_value)
+            elif operator == ">=":
+                is_valid = (left_value >= right_value)
+            elif operator == "<":
+                is_valid = (left_value < right_value)
+            elif operator == "<=":
+                is_valid = (left_value <= right_value)
+        except (TypeError, ValueError):
+            # 型が異なる場合や比較不能な場合は無効とする
+            is_valid = False
+        
+        if is_valid:
+            return ValidationResult(is_valid=True)
+        else:
+            # エラーメッセージのフォーマット
+            msg = error_message_template.format(
+                left_field=left_field,
+                left_value=left_value,
+                operator=operator,
+                right_value=right_value,
+                field=left_field  # 'field'も追加（テンプレートで使用される可能性あり）
+            )
+            return ValidationResult(
+                is_valid=False,
+                error_message=msg,
+                error_fields=[left_field]
+            )
 
 
 class RequiredExpression(Expression):
     """必須項目式"""
     field: str
     required: bool = True
+    
+    def validate(self, context: ValidationContext, error_message_template: str) -> ValidationResult:
+        """
+        必須項目のバリデーションを実行する
+        
+        Args:
+            context: バリデーションコンテキスト
+            error_message_template: エラーメッセージのテンプレート
+            
+        Returns:
+            ValidationResult: バリデーション結果
+        """
+        target_field = self.field
+        value = context.get_field_value(target_field)
+        
+        # required=Trueの場合のみチェック
+        is_valid = not self.required or (value is not None and value != "")
+        
+        if is_valid:
+            return ValidationResult(is_valid=True)
+        else:
+            # エラーメッセージのフォーマット
+            msg = error_message_template.format(field=target_field)
+            return ValidationResult(
+                is_valid=False,
+                error_message=msg,
+                error_fields=[target_field]
+            )
 
 
 class RegexMatchExpression(Expression):
@@ -119,6 +217,48 @@ class RegexMatchExpression(Expression):
         except re.error:
             raise ValueError(f"無効な正規表現です: {v['pattern']}")
         return v
+    
+    def validate(self, context: ValidationContext, error_message_template: str) -> ValidationResult:
+        """
+        正規表現マッチのバリデーションを実行する
+        
+        Args:
+            context: バリデーションコンテキスト
+            error_message_template: エラーメッセージのテンプレート
+            
+        Returns:
+            ValidationResult: バリデーション結果
+        """
+        target_field = self.regex_match['field']
+        pattern = self.regex_match['pattern']
+        value = context.get_field_value(target_field)
+        
+        # 値が文字列でない場合は文字列に変換
+        if value is not None and not isinstance(value, str):
+            value = str(value)
+        
+        # 値がNoneまたは空文字列の場合は検証をスキップ（有効とする）
+        # 必須チェックは別のルールで行う想定
+        if value is None or value == "":
+            return ValidationResult(is_valid=True)
+        
+        # 正規表現マッチ
+        is_valid = bool(re.match(pattern, value))
+        
+        if is_valid:
+            return ValidationResult(is_valid=True)
+        else:
+            # エラーメッセージのフォーマット
+            msg = error_message_template.format(
+                field=target_field,
+                value=value,
+                pattern=pattern
+            )
+            return ValidationResult(
+                is_valid=False,
+                error_message=msg,
+                error_fields=[target_field]
+            )
 
 
 class EnumExpression(Expression):
@@ -132,6 +272,44 @@ class EnumExpression(Expression):
         if not isinstance(v['values'], list) or len(v['values']) == 0:
             raise ValueError("enum.valuesは少なくとも1つの要素を持つリストである必要があります")
         return v
+    
+    def validate(self, context: ValidationContext, error_message_template: str) -> ValidationResult:
+        """
+        列挙型のバリデーションを実行する
+        
+        Args:
+            context: バリデーションコンテキスト
+            error_message_template: エラーメッセージのテンプレート
+            
+        Returns:
+            ValidationResult: バリデーション結果
+        """
+        target_field = self.enum['field']
+        allowed_values = self.enum['values']
+        value = context.get_field_value(target_field)
+        
+        # 値がNoneの場合は検証をスキップ（有効とする）
+        # 必須チェックは別のルールで行う想定
+        if value is None:
+            return ValidationResult(is_valid=True)
+        
+        # 列挙値のチェック
+        is_valid = value in allowed_values
+        
+        if is_valid:
+            return ValidationResult(is_valid=True)
+        else:
+            # エラーメッセージのフォーマット
+            msg = error_message_template.format(
+                field=target_field,
+                value=value,
+                allowed_values=", ".join(str(v) for v in allowed_values)
+            )
+            return ValidationResult(
+                is_valid=False,
+                error_message=msg,
+                error_fields=[target_field]
+            )
 
 
 # 前方参照で循環参照を解決
@@ -219,6 +397,41 @@ class AllOfExpression(Expression):
             data['all_of'] = converted
             
         return data
+    
+    def validate(self, context: ValidationContext, error_message_template: str) -> ValidationResult:
+        """
+        全条件一致のバリデーションを実行する
+        
+        Args:
+            context: バリデーションコンテキスト
+            error_message_template: エラーメッセージのテンプレート
+            
+        Returns:
+            ValidationResult: バリデーション結果
+        """
+        # すべての条件を評価
+        results = [expr.validate(context, "") for expr in self.all_of]
+        
+        # すべての条件が有効であれば有効
+        if all(r.is_valid for r in results):
+            return ValidationResult(is_valid=True)
+        else:
+            # エラーがあった条件のフィールドを集める
+            error_fields = []
+            for result in results:
+                if not result.is_valid and result.error_fields:
+                    error_fields.extend(result.error_fields)
+            
+            # 重複を排除
+            error_fields = list(set(error_fields))
+            
+            # エラーメッセージのフォーマット
+            msg = error_message_template
+            return ValidationResult(
+                is_valid=False,
+                error_message=msg,
+                error_fields=error_fields
+            )
 
 
 class AnyOfExpression(Expression):
@@ -240,6 +453,41 @@ class AnyOfExpression(Expression):
             data['any_of'] = converted
             
         return data
+    
+    def validate(self, context: ValidationContext, error_message_template: str) -> ValidationResult:
+        """
+        いずれかの条件一致のバリデーションを実行する
+        
+        Args:
+            context: バリデーションコンテキスト
+            error_message_template: エラーメッセージのテンプレート
+            
+        Returns:
+            ValidationResult: バリデーション結果
+        """
+        # すべての条件を評価
+        results = [expr.validate(context, "") for expr in self.any_of]
+        
+        # いずれかの条件が有効であれば有効
+        if any(r.is_valid for r in results):
+            return ValidationResult(is_valid=True)
+        else:
+            # すべての条件が無効の場合、エラーフィールドを集める
+            error_fields = []
+            for result in results:
+                if not result.is_valid and result.error_fields:
+                    error_fields.extend(result.error_fields)
+            
+            # 重複を排除
+            error_fields = list(set(error_fields))
+            
+            # エラーメッセージのフォーマット
+            msg = error_message_template
+            return ValidationResult(
+                is_valid=False,
+                error_message=msg,
+                error_fields=error_fields
+            )
 
 
 class NotExpression(Expression):
@@ -254,6 +502,35 @@ class NotExpression(Expression):
             data['not'] = convert_expression(data['not'])
             
         return data
+    
+    def validate(self, context: ValidationContext, error_message_template: str) -> ValidationResult:
+        """
+        否定式のバリデーションを実行する
+        
+        Args:
+            context: バリデーションコンテキスト
+            error_message_template: エラーメッセージのテンプレート
+            
+        Returns:
+            ValidationResult: バリデーション結果
+        """
+        # 内部式を評価
+        result = self.not_.validate(context, "")
+        
+        # 内部式の結果を否定
+        if not result.is_valid:
+            # 内部式が無効なら、この否定式は有効
+            return ValidationResult(is_valid=True)
+        else:
+            # 内部式が有効なら、エラーフィールドを取得
+            # 内部式がどのフィールドに対するものか不明確な場合があるため、
+            # エラーフィールドはconfig_loader側で判定せず、呼び出し側に委ねる
+            msg = error_message_template
+            return ValidationResult(
+                is_valid=False,
+                error_message=msg,
+                error_fields=[]  # エラーフィールドは指定しない
+            )
 
 
 # 前方参照の解決
@@ -275,6 +552,25 @@ class Rule(BaseModel):
         if isinstance(data, dict) and 'expression' in data and isinstance(data['expression'], dict):
             data['expression'] = convert_expression(data['expression'])
         return data
+    
+    def validate(self, context: ValidationContext) -> ValidationResult:
+        """
+        ルールのバリデーションを実行する
+        
+        Args:
+            context: バリデーションコンテキスト
+            
+        Returns:
+            ValidationResult: バリデーション結果
+        """
+        # 内部の式を評価
+        result = self.expression.validate(context, self.error_message)
+        
+        # ルール名を追加しておく（必要に応じて）
+        if not result.is_valid:
+            result.rule_name = self.name
+            
+        return result
 
 
 class OutputFormat(BaseModel):
