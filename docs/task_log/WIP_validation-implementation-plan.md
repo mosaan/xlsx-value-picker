@@ -37,17 +37,18 @@
     *   `--ignore-errors` オプションのサポートも実装しています。
     *   バリデーション結果のログファイル出力 (`--log`) も実装しました。
 
-6.  **単体テスト作成/更新:** (部分的に完了、一部テストが失敗)
-    *   `test/test_validation.py` を新規作成し、各クラスに対する単体テストを実装しました。
-    *   `ValidationContext`, `ValidationResult`, 各 `Expression` 派生クラス、`Rule` クラス、`ValidationEngine` クラスのテストを作成しました。
-    *   現在、`TestNotExpression` のテストが失敗しています。
+6.  **単体テスト作成/更新:** (完了)
+    *   `test/test_validation.py` に実装していた各クラスの単体テストを、pytestスタイルで `test/validation/` 配下に分割・移行しました。
+    *   `ValidationContext`, `ValidationResult`, 各 `Expression` 派生クラス、`Rule` クラス、`ValidationEngine` クラスのテストを `test/validation/` 配下の各ファイルに実装しました。
+    *   `test/test_validation.py` は削除済みです。
+    *   一部テスト（例：`TestNotExpression`）は依然失敗しています。
 
 7.  **テスト修正計画の作成:** (完了)
     * 失敗しているテストの問題点を特定し、修正計画を作成しました。
 
 8.  **循環インポートの解消:** (完了)
     *   `validation_common.py` を作成し、共通クラスを分離することで循環インポートを解消しました。
-    *   関連するモジュール (`validation.py`, `config_loader.py`, `test_validation.py`) のインポート文を修正しました。
+    *   関連するモジュール (`validation.py`, `config_loader.py`, `test/validation/`配下のテスト) のインポート文を修正しました。
 
 9.  **テスト修正の実装:** (作業中)
     *   `TestValidationEngine` のモックパスを修正しました。
@@ -70,7 +71,8 @@
 -   `src/xlsx_value_picker/config_loader.py` (修正、完了)
 -   `src/xlsx_value_picker/excel_processor.py` (修正、完了)
 -   `src/xlsx_value_picker/cli.py` (修正、完了)
--   `test/test_validation.py` (修正、一部テストが失敗)
+-   `test/validation/` 配下の各テストファイル（`test_validation_context.py` など）(新規作成、完了)
+-   `test/test_validation.py` (削除済み)
 -   `test/test_cli_integration.py` (未修正)
 -   テスト用データファイル (未準備)
 -   `docs/spec/rule-schema.json` (未修正)
@@ -95,8 +97,8 @@
 
 1.  **`NotExpression` テストの修正 (最優先):**
     *   Pydanticのドキュメントや関連情報を調査し、エイリアス (`alias`) が設定されたフィールドを持つモデルをPythonコード内でインスタンス化する正しい方法を特定します。
-    *   特定した方法に基づいて `test/test_validation.py` の `TestNotExpression` を修正します。
-    *   `pytest -xvs test/test_validation.py` を実行し、すべてのテストが成功することを確認します。
+    *   特定した方法に基づいて `test/validation/test_not_expression.py` の `TestNotExpression` を修正します。
+    *   `pytest -xvs test/validation/` を実行し、すべてのテストが成功することを確認します。
 
 2.  **統合テストの実装:**
     *   バリデーション成功・失敗ケースを含むテスト用のExcelファイルと設定ファイル (`config.yaml` など) を `test/data` ディレクトリに準備します。
