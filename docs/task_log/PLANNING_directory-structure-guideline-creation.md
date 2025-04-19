@@ -27,6 +27,7 @@
         *   既存文書に含まれる現状のディレクトリ構造の具体的な説明（特に更新が追いついていない部分）は削除する。
     *   **バージョン管理ガイドライン (`docs/guide/version-control-guideline.md`)**:
         *   既存の `docs/project/directory-structure.md` から、「バージョン管理方針」セクションの内容を移行する。
+        *   コミット済みのファイルを移動または名前変更する際は `git mv` を使用するというルールを追加する。
     *   **依存関係管理ガイドライン (`docs/guide/dependency-management-guideline.md`)**:
         *   既存の `docs/project/directory-structure.md` から、「依存関係管理」セクションの内容を移行する。
 3.  **既存文書の削除**: 新しいガイドライン文書の作成後、古い `docs/project/directory-structure.md` を削除する。
