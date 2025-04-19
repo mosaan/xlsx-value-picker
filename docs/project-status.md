@@ -5,14 +5,13 @@
 xlsx-value-pickerプロジェクトは、Excelファイルからの値取得、バリデーション、および様々な形式での出力機能を提供することを目的としています。現在のプロジェクト状況は以下の通りです：
 
 ### 1.1 ドキュメント整備状況
-
-- 要件定義書 (`requirements.md`): 作成済み
-- CLIインターフェース仕様 (`cli-spec.md`): 作成済み
-- ディレクトリ構造定義 (`directory-structure.md`): 作成済み
-- 技術選定ドキュメント (`technology-selection.md`): 作成済み
-- プロジェクト現状文書 (`project-status.md`): 作成済み
-- バリデーション設計ドキュメント (`validation-design.md`): 作成済み
-- Mermaidスタイルガイド (`mermaid-style-guide.md`): 作成済み
+- [要件定義書](requirements.md): 作成済み
+- [CLIインターフェース仕様](cli-spec.md): 作成済み
+- [ディレクトリ構造定義](directory-structure.md): 作成済み
+- [技術選定ドキュメント](technology-selection.md): 作成済み
+- [プロジェクト現状文書](project-status.md): 作成済み
+- [バリデーション設計ドキュメント](validation-design.md): 作成済み
+- [Mermaidスタイルガイド](mermaid-style-guide.md): 作成済み
 
 ### 1.2 実装状況
 
