@@ -18,7 +18,8 @@ excel-validator [オプション] <入力ファイル>
 #### 出力オプション
 - `-o`, `--output <出力ファイル>`: JSONデータの出力先ファイルを指定します。
 - `--log <ログファイル>`: 検証エラーを記録するログファイルを指定します。
-- `--format <フォーマット>`: 出力フォーマットを指定します（`json`, `yaml`, `csv`）。デフォルトは`json`です。
+- `--format <フォーマット>`: 出力フォーマットを指定します（`json`, `yaml`）。デフォルトは`json`です。
+- `--template <Jinja2テンプレートファイル>`: Jinja2テンプレートを使用して出力をカスタマイズします。`--template`オプションを指定した場合、`--format`オプションは無視されます。
 
 #### ヘルプとバージョン
 - `-h`, `--help`: ヘルプ情報を表示します。
@@ -39,4 +40,9 @@ excel-validator -c rules.yaml input.xlsx
 ### 検証結果をJSONファイルに出力
 ```
 excel-validator -o results.json input.xlsx
+```
+
+### Jinja2テンプレートを使用して出力
+```
+excel-validator --template template.j2 input.xlsx
 ```
