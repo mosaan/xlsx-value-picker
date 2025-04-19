@@ -5,16 +5,28 @@
 xlsx-value-pickerプロジェクトは、Excelファイルからの値取得、バリデーション、および様々な形式での出力機能を提供することを目的としています。現在のプロジェクト状況は以下の通りです：
 
 ### 1.1 ドキュメント整備状況
-- [要件定義書](requirements.md): 作成済み
-- [CLIインターフェース仕様](cli-spec.md): 作成済み
-- [ディレクトリ構造定義](directory-structure.md): 作成済み
-- [技術選定ドキュメント](technology-selection.md): 作成済み
-- [プロジェクト現状文書](project-status.md): 作成済み。随時更新。
-- [バリデーション設計ドキュメント](validation-design.md): 作成済み
-- [Mermaidスタイルガイド](mermaid-style-guide.md): 作成済み
+
+**プロジェクト文書**:
+- [要件定義書](project/requirements.md): 作成済み
+- [ディレクトリ構造定義](project/directory-structure.md): 作成済み
+- [技術選定ドキュメント](project/technology-selection.md): 作成済み
+
+**仕様文書**:
+- [CLIインターフェース仕様](spec/cli-spec.md): 作成済み
+- [バリデーションルールスキーマ](spec/rule-schema.json): 作成済み
+
+**設計文書**:
+- [バリデーション設計ドキュメント](design/validation-design.md): 作成済み
+- [設定ローダー設計](design/config-loader-design.md): 作成済み
+
+**ガイドライン**:
+- [Mermaidスタイルガイド](guide/mermaid-style-guide.md): 作成済み
+
+**タスク記録**:
 - [CLI実装計画](task_log/cli-implementation-plan.md): 作成済み。廃止予定。
 - [Expression型認識問題修正](task_log/expression-type-recognition-fix.md): 作成済み。問題が解決済み。
 - [ドキュメント整理計画](task_log/document-reorganization.md): 作成済み。実施中。
+- [ドキュメント再編計画](task_log/document-genre-reorganization.md): 作成済み。実施中。
 
 ### 1.2 実装状況
 
@@ -56,7 +68,7 @@ xlsx-value-pickerプロジェクトは、Excelファイルからの値取得、�
 
 - [x] 基本的なドキュメント整備
 - [x] プロジェクトの現状と計画の文書化（本ドキュメント）
-- [x] 実装方針の詳細検討と文書化（バリデーション設計ドキュメント、Mermaidスタイルガイド）
+- [x] 実装方針の詳細検討と文書化（[バリデーション設計ドキュメント](design/validation-design.md)、[Mermaidスタイルガイド](guide/mermaid-style-guide.md)）
 - [x] スキーマ定義の見直し・拡充（JSONスキーマによる検証実装済み）
 
 ### フェーズ2: コードベースの見直しと再構築（完了）
@@ -118,7 +130,7 @@ xlsx-value-pickerプロジェクトは、Excelファイルからの値取得、�
 
 - **ドキュメント間の整合性維持**: 複数のドキュメントで同じ内容を記述している箇所があるため、更新時は関連するすべてのドキュメントを確認し、整合性を保つことが重要です。
 
-- **Mermaid図表の構文**: ドキュメント内のMermaid図表を編集する際は、`mermaid-style-guide.md`に記載されているガイドラインを遵守してください。
+- **Mermaid図表の構文**: ドキュメント内のMermaid図表を編集する際は、[`guide/mermaid-style-guide.md`](guide/mermaid-style-guide.md)に記載されているガイドラインを遵守してください。
 
 - **依存関係管理**: 依存パッケージのバージョン固定が必要です。uv（Pythonパッケージマネージャー）を使用して依存関係を管理しています。
 
