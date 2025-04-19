@@ -40,63 +40,75 @@
 6.  **単体テスト作成/更新:** (部分的に完了、一部テストが失敗)
     *   `test/test_validation.py` を新規作成し、各クラスに対する単体テストを実装しました。
     *   `ValidationContext`, `ValidationResult`, 各 `Expression` 派生クラス、`Rule` クラス、`ValidationEngine` クラスのテストを作成しました。
-    *   現在、一部テストが失敗しています：
-        - `TestNotExpression.test_not_invalid` - `NotExpression`の初期化でエラーが発生
-        - `TestNotExpression.test_not_valid` - `NotExpression`の初期化でエラーが発生 
-        - `TestValidationEngine.test_validate` - `ValidationEngine`のモックテストでエラーが発生
+    *   現在、`TestNotExpression` のテストが失敗しています。
 
-7.  **統合テスト更新:** (作業中)
-    *   `test/test_cli_integration.py` の更新を開始しましたが、まだ完了していません。
-    *   バリデーション成功・失敗ケースのテストファイルを準備中です。
+7.  **テスト修正計画の作成:** (完了)
+    * 失敗しているテストの問題点を特定し、修正計画を作成しました。
 
-8.  **テスト実行と確認:** (未実施)
-    *   現時点では一部テストが失敗しているため、テスト実行による確認が完了していません。
-    *   失敗テストの修正が必要です。
-    
-9.  **不要コードの削除:** (完了)
-    *   `src/xlsx_value_picker/config.py` ファイルを削除しました。このファイルは現在の設計と矛盾しており、新しい実装に置き換えられました。
+8.  **循環インポートの解消:** (完了)
+    *   `validation_common.py` を作成し、共通クラスを分離することで循環インポートを解消しました。
+    *   関連するモジュール (`validation.py`, `config_loader.py`, `test_validation.py`) のインポート文を修正しました。
+
+9.  **テスト修正の実装:** (作業中)
+    *   `TestValidationEngine` のモックパスを修正しました。
+    *   `TestNotExpression` のテスト修正を試みましたが、依然として失敗しています。
+
+10. **統合テスト更新:** (未着手)
+    *   `test/test_cli_integration.py` の更新はまだ行っていません。
+    *   バリデーション成功・失敗ケースのテストファイルも準備が必要です。
+
+11. **テスト実行と確認:** (未実施)
+    *   `TestNotExpression` のテストが失敗しているため、全テストの成功は確認できていません。
+
+12. **不要コードの削除:** (完了)
+    *   `src/xlsx_value_picker/config.py` ファイルを削除しました。
 
 ## 4. 成果物 (作成状況)
 
--   `src/xlsx_value_picker/validation.py` (新規作成、完了)
+-   `src/xlsx_value_picker/validation_common.py` (新規作成、完了)
+-   `src/xlsx_value_picker/validation.py` (修正、完了)
 -   `src/xlsx_value_picker/config_loader.py` (修正、完了)
 -   `src/xlsx_value_picker/excel_processor.py` (修正、完了)
 -   `src/xlsx_value_picker/cli.py` (修正、完了)
--   `test/test_validation.py` (新規作成、一部テストが失敗)
--   `test/test_cli_integration.py` (修正中)
--   テスト用データファイル (準備中)
--   `docs/spec/rule-schema.json` (まだ修正していません)
--   `docs/spec/cli-spec.md` (まだ修正していません)
+-   `test/test_validation.py` (修正、一部テストが失敗)
+-   `test/test_cli_integration.py` (未修正)
+-   テスト用データファイル (未準備)
+-   `docs/spec/rule-schema.json` (未修正)
+-   `docs/spec/cli-spec.md` (未修正)
 -   `src/xlsx_value_picker/config.py` (削除済み)
 
 ## 5. 現在の課題
 
-1. テストの修正
-   - `NotExpression`クラスのテストが失敗しています。これはフィールド名の定義（`not_` と `not` のエイリアス）と、テスト時の引数指定方法に問題があると思われます。
-   - `ValidationEngine`のモックテストが失敗しています。`get_excel_values`関数のインポートパスに関する問題があるようです。
+1.  **`TestNotExpression` のテスト失敗:**
+    *   `NotExpression` クラスのインスタンス化時に `ValidationError` が発生しています。
+    *   原因は、Pydanticモデルのフィールドにエイリアス (`alias='not'`) が設定されている場合に、Pythonコード内で直接インスタンス化する方法にあると考えられます。
+    *   `NotExpression(not_=...)` や `NotExpression.model_validate({"not": ...})` のいずれの方法でも解決できていません。Pydanticの仕様やドキュメントを確認し、エイリアス付きフィールドを持つモデルをコード内で正しく初期化する方法を特定する必要があります。
 
-2. 統合テストの完成
-   - CLIのバリデーション機能に対する統合テストを完成させる必要があります。
-   - テスト用のExcelファイルと設定ファイルを準備する必要があります。
+2.  **統合テストの未実装:**
+    *   CLIのバリデーション機能に対する統合テスト (`test/test_cli_integration.py`) が未実装です。
+    *   テスト用のExcelファイルと設定ファイル（成功ケース、失敗ケース）を準備する必要があります。
 
-3. ドキュメント更新
-   - `rule-schema.json`と`cli-spec.md`の更新が必要です。
+3.  **ドキュメントの未更新:**
+    *   バリデーション機能の追加に伴う `rule-schema.json` と `cli-spec.md` の更新が必要です。
 
 ## 6. 次のステップ
 
-1. テスト失敗の修正
-   - NotExpressionのテストコードの修正
-   - ValidationEngineのモックテストの修正
+1.  **`NotExpression` テストの修正 (最優先):**
+    *   Pydanticのドキュメントや関連情報を調査し、エイリアス (`alias`) が設定されたフィールドを持つモデルをPythonコード内でインスタンス化する正しい方法を特定します。
+    *   特定した方法に基づいて `test/test_validation.py` の `TestNotExpression` を修正します。
+    *   `pytest -xvs test/test_validation.py` を実行し、すべてのテストが成功することを確認します。
 
-2. 統合テストの完成
-   - 統合テスト用のファイル準備
-   - `test_cli_integration.py`の更新完了
+2.  **統合テストの実装:**
+    *   バリデーション成功・失敗ケースを含むテスト用のExcelファイルと設定ファイル (`config.yaml` など) を `test/data` ディレクトリに準備します。
+    *   `test/test_cli_integration.py` に、`--validate-only` オプションや `--ignore-errors` オプションを使用した際のCLIの動作を検証するテストケースを追加します。
 
-3. 実装確認
-   - すべてのテストを実行して確認
+3.  **実装確認:**
+    *   すべてのテスト (`pytest`) を実行し、成功することを確認します。
 
-4. ドキュメント更新
-   - 設計ドキュメントとの一貫性確認
-   - APIドキュメントの更新
-   - `rule-schema.json`の更新
-   - `cli-spec.md`の更新
+4.  **ドキュメント更新:**
+    *   `docs/spec/rule-schema.json` に、バリデーションルール (`compare`, `required`, `regex_match`, `enum`, `all_of`, `any_of`, `not`) の定義を追加・更新します。
+    *   `docs/spec/cli-spec.md` に、`--validate-only` および `--ignore-errors` オプションに関する説明を追加します。
+    *   必要に応じて、他の設計ドキュメントやREADMEも更新します。
+
+5.  **作業完了確認:**
+    *   すべての作業が完了したら、ユーザーに報告し、完了の承認を求めます。

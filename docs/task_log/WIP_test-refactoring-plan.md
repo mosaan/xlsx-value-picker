@@ -50,3 +50,14 @@
 
 *   リファクタリング後、すべてのテストが `pytest` で正常に実行され、成功すること。
 *   `TestNotExpression` のテストが成功すること。失敗する場合は、原因調査と修正を別途計画します。
+
+## 6. 作業進捗（2025-04-19時点）
+
+- `test/validation/`ディレクトリを作成済み。
+- `test/test_validation.py`から以下のテストクラスをpytestスタイルで分割・移行済み：
+    - `TestValidationContext` → `test/validation/test_validation_context.py`
+    - `TestValidationResult` → `test/validation/test_validation_result.py`
+    - `TestCompareExpression` → `test/validation/test_compare_expression.py`
+- 今後の予定：
+    - `TestRequiredExpression`以降の各テストクラスも順次pytestスタイルで分割・移行する。
+    - 全クラス移行後、`test/test_validation.py`を削除し、pytestで全テストが成功することを確認する。
