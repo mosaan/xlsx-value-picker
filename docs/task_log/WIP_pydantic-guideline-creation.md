@@ -29,17 +29,22 @@ Pydanticモデルはデータ構造の定義と検証に強力な機能を提供
     *   **テスト容易性**: ロジックを含むモデルの単体テストが現実的に可能か。依存性の注入（DI）などを検討する。
     *   **再利用性**: ロジック部分をモデル外で再利用する必要があるか。
     *   **Pydanticの主目的**: ライブラリの意図から大きく逸脱していないか。
+    *   **コードのシンプルさ**: ロジックを含めることで、全体としてコードがよりシンプルかつ直感的になるか？（例: ファクトリが不要になる）
 6.  **結論**: 状況に応じてSRPと凝集度のバランスを考慮し、判断する。基本は分離を推奨するが、明確なメリットがある場合はロジックの同梱を許容する。
 
 ## 4. 作業ステップ
 
-1.  本計画書 (`PLANNING_pydantic-guideline-creation.md`) を作成し、ユーザーレビューを受ける。
-2.  レビュー結果に基づき、ガイドライン文書 (`docs/guide/pydantic-model-design-guideline.md`) のドラフトを作成する。
-3.  ガイドライン文書のドラフトについて、ユーザーレビューを受ける。
-4.  レビュー結果を反映し、ガイドライン文書を完成させる。
+1.  ~~本計画書 (`WIP_pydantic-guideline-creation.md`) を作成し、ユーザーレビューを受ける。~~ **完了**
+2.  ~~レビュー結果に基づき、ガイドライン文書 (`docs/guide/pydantic-model-design-guideline.md`) のドラフトを作成する。~~ **完了**
+3.  ~~ガイドライン文書のドラフトについて、ユーザーレビューを受ける。~~ **完了**
+4.  ~~レビュー結果を反映し、ガイドライン文書を完成させる。~~ **完了**
 5.  本計画書のファイル名を `DONE_pydantic-guideline-creation.md` に変更し、成果物へのリンクなどを追記する。
 
 ## 5. 成果物
 
--   `docs/guide/pydantic-model-design-guideline.md` (新規作成)
+-   [docs/guide/pydantic-model-design-guideline.md](docs/guide/pydantic-model-design-guideline.md) (新規作成)
 -   `docs/task_log/DONE_pydantic-guideline-creation.md` (本計画書を更新)
+
+## 6. 作業結果
+
+計画に基づき、Pydanticモデルの設計方針に関するガイドライン文書を作成し、ユーザーの承認を得た。
