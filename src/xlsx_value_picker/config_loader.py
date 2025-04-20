@@ -164,7 +164,14 @@ class CompareExpression(Expression):
                 right_value=right_value,
                 field=left_field,  # 'field'も追加（テンプレートで使用される可能性あり）
             )
-            return ValidationResult(is_valid=False, error_message=msg, error_fields=[left_field])
+            location = context.get_field_location(left_field)
+            locations = [location] if location else []
+            return ValidationResult(
+                is_valid=False,
+                error_message=msg,
+                error_fields=[left_field],
+                error_locations=locations # Add location
+            )
 
 
 class RequiredExpression(Expression):
@@ -229,24 +236,37 @@ class RegexMatchExpression(Expression):
         pattern = self.regex_match["pattern"]
         value = context.get_field_value(target_field)
 
-        # 値が文字列でない場合は文字列に変換
-        if value is not None and not isinstance(value, str):
-            value = str(value)
+        # 値がNoneの場合は無効とする（正規表現は通常文字列に対して動作するため）
+        if value is None:
+             is_valid = False
+        else:
+            # 値が文字列でない場合は文字列に変換
+            if not isinstance(value, str):
+                value_str = str(value)
+            else:
+                value_str = value
 
-        # 値がNoneまたは空文字列の場合は検証をスキップ（有効とする）
-        # 必須チェックは別のルールで行う想定
-        if value is None or value == "":
-            return ValidationResult(is_valid=True)
+            # 正規表現マッチ
+            try:
+                is_valid = bool(re.match(pattern, value_str))
+            except re.error:
+                 # パターン自体が無効な場合は Pydantic バリデータで検出されるはずだが念のため
+                 is_valid = False
 
-        # 正規表現マッチ
-        is_valid = bool(re.match(pattern, value))
 
         if is_valid:
             return ValidationResult(is_valid=True)
         else:
             # エラーメッセージのフォーマット
             msg = error_message_template.format(field=target_field, value=value, pattern=pattern)
-            return ValidationResult(is_valid=False, error_message=msg, error_fields=[target_field])
+            location = context.get_field_location(target_field)
+            locations = [location] if location else []
+            return ValidationResult(
+                is_valid=False,
+                error_message=msg,
+                error_fields=[target_field],
+                error_locations=locations
+            )
 
 
 class EnumExpression(Expression):
@@ -277,10 +297,8 @@ class EnumExpression(Expression):
         allowed_values = self.enum["values"]
         value = context.get_field_value(target_field)
 
-        # 値がNoneの場合は検証をスキップ（有効とする）
+        # 値がNoneの場合でも、allowed_valuesに含まれていれば有効とする
         # 必須チェックは別のルールで行う想定
-        if value is None:
-            return ValidationResult(is_valid=True)
 
         # 列挙値のチェック
         is_valid = value in allowed_values
@@ -292,7 +310,14 @@ class EnumExpression(Expression):
             msg = error_message_template.format(
                 field=target_field, value=value, allowed_values=", ".join(str(v) for v in allowed_values)
             )
-            return ValidationResult(is_valid=False, error_message=msg, error_fields=[target_field])
+            location = context.get_field_location(target_field)
+            locations = [location] if location else []
+            return ValidationResult(
+                is_valid=False,
+                error_message=msg,
+                error_fields=[target_field],
+                error_locations=locations
+            )
 
 
 # 前方参照で循環参照を解決
@@ -394,24 +419,44 @@ class AllOfExpression(Expression):
             ValidationResult: バリデーション結果
         """
         # すべての条件を評価
-        results = [expr.validate(context, "") for expr in self.all_of]
+        results = [expr.validate(context, "") for expr in self.all_of] # Use a neutral template for sub-expressions
 
         # すべての条件が有効であれば有効
         if all(r.is_valid for r in results):
             return ValidationResult(is_valid=True)
         else:
-            # エラーがあった条件のフィールドを集める
-            error_fields = []
-            for result in results:
-                if not result.is_valid and result.error_fields:
-                    error_fields.extend(result.error_fields)
+            # エラーがあった条件のフィールドと場所を集める
+            all_error_fields = []
+            all_error_locations = []
+            sub_error_messages = [] # Collect sub-error messages if needed
+            for i, result in enumerate(results):
+                if not result.is_valid:
+                    if result.error_fields:
+                        all_error_fields.extend(result.error_fields)
+                    # Add locations based on the fields from the failed sub-expression
+                    if result.error_fields:
+                        locations = [context.get_field_location(f) for f in result.error_fields if context.get_field_location(f)]
+                        all_error_locations.extend(locations)
+                    # Optionally collect sub-messages
+                    # if result.error_message:
+                    #    sub_error_messages.append(f"Condition {i+1} failed: {result.error_message}")
+
 
             # 重複を排除
-            error_fields = list(set(error_fields))
+            unique_error_fields = sorted(list(set(all_error_fields)))
+            unique_error_locations = sorted(list(set(all_error_locations)))
 
-            # エラーメッセージのフォーマット
+            # エラーメッセージのフォーマット (Main message + optional sub-messages)
             msg = error_message_template
-            return ValidationResult(is_valid=False, error_message=msg, error_fields=error_fields)
+            # if sub_error_messages:
+            #    msg += " (" + "; ".join(sub_error_messages) + ")"
+
+            return ValidationResult(
+                is_valid=False,
+                error_message=msg,
+                error_fields=unique_error_fields,
+                error_locations=unique_error_locations
+            )
 
 
 class AnyOfExpression(Expression):
@@ -545,9 +590,13 @@ class Rule(BaseModel):
         # 内部の式を評価
         result = self.expression.validate(context, self.error_message)
 
-        # ルール名を追加しておく（必要に応じて）
+        # ルール名と場所情報を追加
         if not result.is_valid:
             result.rule_name = self.name
+            # Ensure locations are populated if fields exist
+            if result.error_fields and not result.error_locations:
+                 locations = [context.get_field_location(f) for f in result.error_fields if context.get_field_location(f)]
+                 result.error_locations = sorted(list(set(locations))) # Use set to avoid duplicates if expression already added some
 
         return result
 

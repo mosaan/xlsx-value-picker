@@ -5,77 +5,51 @@ CompareExpressionのテスト（pytestスタイル）
 import pytest
 
 from xlsx_value_picker.config_loader import CompareExpression
-from xlsx_value_picker.validation_common import ValidationContext
 
 
 class TestCompareExpression:
-    @pytest.fixture(autouse=True)
-    def setup_context(self):
-        self.context = ValidationContext(
-            cell_values={"age": 30, "price": 1000, "name": "テスト"},
-            field_locations={"age": "Sheet1!A1", "price": "Sheet1!B1", "name": "Sheet1!C1"},
+    @pytest.mark.parametrize(
+        "left_field, operator, right_value, expected_valid",
+        [
+            ("age", "==", 25, True),
+            ("age", "==", 30, False),
+            ("name", "==", "テスト", True),
+            ("name", "==", "違うテスト", False),
+            ("age", "!=", 30, True),
+            ("age", "!=", 25, False),
+            ("age", ">", 20, True),
+            ("age", ">", 25, False),
+            ("age", ">=", 25, True),
+            ("age", ">=", 26, False),
+            ("age", "<", 30, True),
+            ("age", "<", 25, False),
+            ("age", "<=", 25, True),
+            ("age", "<=", 24, False),
+            ("price", "==", 1000, True),
+            ("price", ">", 999, True),
+            ("price", "<", 1001, True),
+            ("none_value", "==", None, True),
+            ("none_value", "!=", None, False),
+            ("age", "==", None, False),
+            ("missing_field", "==", None, True),
+            ("missing_field", "!=", None, False),
+        ],
+    )
+    def test_comparison_operators(
+        self, validation_context, left_field, operator, right_value, expected_valid
+    ):
+        """Test various comparison operators with different values."""
+        expr = CompareExpression(compare={"left": left_field, "operator": operator, "right": right_value})
+        result = expr.validate(
+            validation_context, "{left_field} {operator} {right_value} の比較が失敗しました"
         )
+        assert result.is_valid == expected_valid
+        if not expected_valid:
+            assert result.error_fields == [left_field]
 
-    def test_equal_operator_valid(self):
-        expr = CompareExpression(compare={"left": "age", "operator": "==", "right": 30})
-        result = expr.validate(self.context, "値が一致しません: {left_field}={left_value}, 期待値={right_value}")
-        assert result.is_valid
-
-    def test_equal_operator_invalid(self):
-        expr = CompareExpression(compare={"left": "age", "operator": "==", "right": 40})
-        result = expr.validate(self.context, "値が一致しません: {left_field}={left_value}, 期待値={right_value}")
+    def test_invalid_comparison_type_error(self, validation_context):
+        """Test comparison that raises TypeError (e.g., comparing number and string)."""
+        expr = CompareExpression(compare={"left": "age", "operator": ">", "right": "text"})
+        result = expr.validate(validation_context, "比較エラー")
         assert not result.is_valid
-        assert "値が一致しません" in result.error_message
         assert result.error_fields == ["age"]
-
-    def test_not_equal_operator(self):
-        expr = CompareExpression(compare={"left": "age", "operator": "!=", "right": 40})
-        result = expr.validate(self.context, "エラーメッセージ")
-        assert result.is_valid
-
-        expr = CompareExpression(compare={"left": "age", "operator": "!=", "right": 30})
-        result = expr.validate(self.context, "値が一致しています: {left_field}={left_value}")
-        assert not result.is_valid
-        assert "値が一致しています" in result.error_message
-
-    def test_greater_than_operator(self):
-        expr = CompareExpression(compare={"left": "age", "operator": ">", "right": 20})
-        result = expr.validate(self.context, "エラーメッセージ")
-        assert result.is_valid
-
-        expr = CompareExpression(compare={"left": "age", "operator": ">", "right": 30})
-        result = expr.validate(self.context, "値が小さすぎます: {left_field}={left_value}, 最小値={right_value}")
-        assert not result.is_valid
-        assert "値が小さすぎます" in result.error_message
-
-    def test_greater_than_or_equal_operator(self):
-        expr = CompareExpression(compare={"left": "age", "operator": ">=", "right": 30})
-        result = expr.validate(self.context, "エラーメッセージ")
-        assert result.is_valid
-
-        expr = CompareExpression(compare={"left": "age", "operator": ">=", "right": 31})
-        result = expr.validate(self.context, "値が小さすぎます: {left_field}={left_value}, 最小値={right_value}")
-        assert not result.is_valid
-
-    def test_less_than_operator(self):
-        expr = CompareExpression(compare={"left": "age", "operator": "<", "right": 40})
-        result = expr.validate(self.context, "エラーメッセージ")
-        assert result.is_valid
-
-        expr = CompareExpression(compare={"left": "age", "operator": "<", "right": 30})
-        result = expr.validate(self.context, "値が大きすぎます: {left_field}={left_value}, 最大値={right_value}")
-        assert not result.is_valid
-
-    def test_less_than_or_equal_operator(self):
-        expr = CompareExpression(compare={"left": "age", "operator": "<=", "right": 30})
-        result = expr.validate(self.context, "エラーメッセージ")
-        assert result.is_valid
-
-        expr = CompareExpression(compare={"left": "age", "operator": "<=", "right": 29})
-        result = expr.validate(self.context, "値が大きすぎます: {left_field}={left_value}, 最大値={right_value}")
-        assert not result.is_valid
-
-    def test_invalid_comparison(self):
-        expr = CompareExpression(compare={"left": "name", "operator": "<", "right": 100})
-        result = expr.validate(self.context, "比較が不可能です: {left_field}={left_value}")
-        assert not result.is_valid

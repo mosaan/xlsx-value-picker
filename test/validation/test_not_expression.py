@@ -5,32 +5,27 @@ NotExpressionのpytestテスト
 import pytest
 
 from xlsx_value_picker.config_loader import CompareExpression, NotExpression
-from xlsx_value_picker.validation_common import ValidationContext
 
 
-@pytest.fixture
-def context():
-    return ValidationContext(
-        cell_values={"age": 25, "status": "inactive"},
-        field_locations={"age": "Sheet1!A1", "status": "Sheet1!B1"},
-    )
-
-
-def test_not_valid(context):
-    # 修正：model_validateメソッドを使用してNotExpressionをインスタンス化
+def test_not_valid(validation_context): # Use the common fixture
+    # The inner expression (age < 20) is False because age is 25.
+    # So, NotExpression should be True.
     expr = NotExpression.model_validate(
         {"not": CompareExpression(compare={"left": "age", "operator": "<", "right": 20})}
     )
-    result = expr.validate(context, "条件に合致してはいけません")
+    result = expr.validate(validation_context, "条件に合致してはいけません")
     assert result.is_valid
 
 
-def test_not_invalid(context):
-    # 修正：model_validateメソッドを使用してNotExpressionをインスタンス化
+def test_not_invalid(validation_context): # Use the common fixture
+    # The inner expression (age > 20) is True because age is 25.
+    # So, NotExpression should be False.
     expr = NotExpression.model_validate(
         {"not": CompareExpression(compare={"left": "age", "operator": ">", "right": 20})}
     )
-    result = expr.validate(context, "条件に合致してはいけません")
+    result = expr.validate(validation_context, "条件に合致してはいけません")
     assert not result.is_valid
     assert result.error_message == "条件に合致してはいけません"
-    assert result.error_fields == []  # NotExpressionはエラーフィールドを指定しない
+    # NotExpression itself doesn't add error fields, it relies on the inner expression's potential fields if needed,
+    # but the logic here is just negation. The spec might need clarification if fields are expected.
+    assert result.error_fields == []

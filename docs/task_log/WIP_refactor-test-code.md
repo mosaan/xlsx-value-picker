@@ -1,4 +1,3 @@
-```markdown
 # テストコードリファクタリング計画
 
 ## 1. 目的
@@ -43,4 +42,27 @@
 ## 7. 承認
 
 ユーザー確認待ち。
-```
+
+## 8. 作業結果 (2025-04-20追記)
+
+- `test/validation/conftest.py` を作成し、共通の `validation_context` fixture を定義しました。
+- `test/validation/` 配下の以下のテストファイルをリファクタリングし、共通 fixture と `pytest.mark.parametrize` を使用するように変更しました。
+    - `test_all_of_expression.py`
+    - `test_any_of_expression.py`
+    - `test_compare_expression.py`
+    - `test_enum_expression.py`
+    - `test_not_expression.py`
+    - `test_regex_match_expression.py`
+    - `test_required_expression.py`
+    - `test_rule.py`
+- リファクタリング中に発見されたテストの失敗に基づき、`src/xlsx_value_picker/config_loader.py` の以下のクラスのバリデーションロジックを修正しました。
+    - `AllOfExpression`: 失敗したサブ式の `error_fields` と `error_locations` を正しく収集するように修正。
+    - `EnumExpression`: `None` 値や存在しないフィールドの場合の処理を修正し、`error_locations` を追加。
+    - `RegexMatchExpression`: `None` 値や空文字列の場合の処理を修正し、`error_locations` を追加。
+    - `CompareExpression`: `error_locations` を追加。
+    - `Rule`: 失敗時に `error_locations` が正しく設定されるように修正。
+- `uv run pytest` を実行し、すべてのテスト (127件) が成功することを確認しました。
+
+## 9. 完了確認
+
+上記作業結果に基づき、テストコードのリファクタリングは完了と判断します。ユーザーに完了を確認・承認を依頼します。
