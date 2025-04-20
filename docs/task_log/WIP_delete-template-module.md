@@ -14,7 +14,7 @@
 1.  **依存関係確認:** `src/xlsx_value_picker/` ディレクトリ全体で `template.py` モジュールが import されていないことを確認します (特に `output_formatter.py`)。
 2.  **ファイル削除:** `src/xlsx_value_picker/template.py` ファイルを削除します。
 3.  **テスト確認:** 関連するテスト (`test/test_output_formatter.py` など) が `template.py` に依存していないことを確認します。
-4.  **テスト実行:** `uv run pytest` を実行し、すべてのテストが成功することを確認します。
+4.  **テスト実行:** `uv run test` を実行し、すべてのテストが成功することを確認します。
 
 ## 4. 作業手順
 
