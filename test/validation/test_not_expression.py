@@ -4,7 +4,9 @@ NotExpressionのpytestテスト
 
 import pytest
 
-from xlsx_value_picker.config_loader import CompareExpression, NotExpression
+# Expression関連は validation_expressions からインポート
+from xlsx_value_picker.validation_expressions import CompareExpression, NotExpression
+from xlsx_value_picker.validation_common import ValidationContext, ValidationResult # これらは共通モジュールから
 
 
 def test_not_valid(validation_context): # Use the common fixture

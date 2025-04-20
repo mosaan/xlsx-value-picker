@@ -4,8 +4,11 @@ ValidationEngineのpytestテスト
 
 from unittest.mock import patch
 
-from xlsx_value_picker.config_loader import CompareExpression, RegexMatchExpression, Rule
+from xlsx_value_picker.config_loader import Rule # Rule は config_loader に残る
+# Expression関連は validation_expressions からインポート
+from xlsx_value_picker.validation_expressions import CompareExpression, RegexMatchExpression
 from xlsx_value_picker.validation import ValidationEngine
+from xlsx_value_picker.validation_common import ValidationResult # ValidationResult も必要
 
 
 @patch("xlsx_value_picker.excel_processor.get_excel_values")

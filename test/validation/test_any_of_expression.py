@@ -4,7 +4,14 @@ AnyOfExpressionのpytestテスト
 
 import pytest
 
-from xlsx_value_picker.config_loader import AnyOfExpression, CompareExpression, RegexMatchExpression, RequiredExpression
+# Expression関連は validation_expressions からインポート
+from xlsx_value_picker.validation_expressions import (
+    AnyOfExpression,
+    CompareExpression,
+    RegexMatchExpression,
+    RequiredExpression,
+)
+from xlsx_value_picker.validation_common import ValidationContext, ValidationResult # これらは共通モジュールから
 
 
 def test_any_of_valid(validation_context): # Use the common fixture

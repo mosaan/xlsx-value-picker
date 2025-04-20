@@ -14,20 +14,26 @@ import yaml
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from xlsx_value_picker.config_loader import (
-    AllOfExpression,
-    AnyOfExpression,
-    CompareExpression,
     ConfigLoader,
     ConfigModel,
     ConfigParser,
     ConfigValidationError,
-    EnumExpression,
-    NotExpression,
     OutputFormat,
+    SchemaValidator,
+    Rule, # Rule は config_loader に残る
+)
+# Expression関連は validation_expressions からインポート
+from xlsx_value_picker.validation_expressions import (
+    AllOfExpression,
+    AnyOfExpression,
+    CompareExpression,
+    EnumExpression,
+    Expression, # Expression 基底クラスも必要に応じてインポート
+    NotExpression,
     RegexMatchExpression,
     RequiredExpression,
-    SchemaValidator,
 )
+from xlsx_value_picker.validation_common import ValidationContext, ValidationResult # これらは共通モジュールから
 
 
 class TestConfigParser:

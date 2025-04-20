@@ -6,7 +6,6 @@
 クラス・インターフェースをこのモジュールに集約しています。
 """
 
-from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Any
 
@@ -63,19 +62,4 @@ class ValidationResult:
             self.error_locations = []
 
 
-class IExpression(ABC):
-    """バリデーション式のインターフェース"""
-
-    @abstractmethod
-    def validate(self, context: ValidationContext, error_message_template: str) -> ValidationResult:
-        """
-        ルール式の検証を行い結果を返す
-
-        Args:
-            context: バリデーションコンテキスト
-            error_message_template: エラーメッセージのテンプレート
-
-        Returns:
-            ValidationResult: 検証結果
-        """
-        pass
+# IExpression インターフェースは validation_expressions.py に移動

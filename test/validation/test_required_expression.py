@@ -4,8 +4,9 @@ RequiredExpressionのpytestテスト
 
 import pytest
 
-from xlsx_value_picker.config_loader import RequiredExpression
-# Remove unused import: from xlsx_value_picker.validation_common import ValidationContext
+# Expression関連は validation_expressions からインポート
+from xlsx_value_picker.validation_expressions import RequiredExpression
+from xlsx_value_picker.validation_common import ValidationContext, ValidationResult # これらは共通モジュールから
 
 
 # Remove the context fixture, it's now in conftest.py
