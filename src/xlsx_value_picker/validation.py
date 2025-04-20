@@ -8,12 +8,11 @@
 from typing import Any, Dict, List, Optional, Union
 
 # config_loader ではなく validation_common からクラスをインポート
-from xlsx_value_picker.validation_common import (
-    ValidationContext, ValidationResult, IExpression
-)
+from xlsx_value_picker.validation_common import ValidationContext, ValidationResult, IExpression
 
 # 前方参照型を使ってRuleをインポート
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
     from xlsx_value_picker.config_loader import Rule
 
@@ -25,7 +24,7 @@ class ValidationEngine:
     ルールリストに基づいてバリデーションを実行するエンジンです。
     """
 
-    def __init__(self, rules: List['Rule']):
+    def __init__(self, rules: List["Rule"]):
         """
         初期化メソッド
 
@@ -51,10 +50,7 @@ class ValidationEngine:
         cell_values = get_excel_values(excel_file, field_mapping)
 
         # コンテキストを構築
-        context = ValidationContext(
-            cell_values=cell_values,
-            field_locations=field_mapping
-        )
+        context = ValidationContext(cell_values=cell_values, field_locations=field_mapping)
 
         # すべてのルールを評価
         results = []
@@ -64,9 +60,7 @@ class ValidationEngine:
                 # エラー位置情報を追加
                 if result.error_fields:
                     result.error_locations = [
-                        field_mapping.get(field, "不明") 
-                        for field in result.error_fields
-                        if field in field_mapping
+                        field_mapping.get(field, "不明") for field in result.error_fields if field in field_mapping
                     ]
                 results.append(result)
 
