@@ -176,15 +176,13 @@ def create_test_schema(path):
                     "required": ["name", "expression", "error_message"],
                 },
             },
-             "output": { # output を必須にする
-                 "type": "object",
-                 "properties": {
-                     "format": {"type": "string", "enum": ["json", "yaml", "csv"]}
-                 },
-                 "required": ["format"]
-             }
+            "output": {  # output を必須にする
+                "type": "object",
+                "properties": {"format": {"type": "string", "enum": ["json", "yaml", "csv"]}},
+                "required": ["format"],
+            },
         },
-        "required": ["fields", "rules", "output"], # output を必須にする
+        "required": ["fields", "rules", "output"],  # output を必須にする
     }
     with open(path, "w", encoding="utf-8") as f:
         json.dump(schema, f, indent=2)
@@ -255,9 +253,11 @@ class TestCLI:
         """有効なYAML設定ファイルでの実行テスト"""
         excel_path = setup_files["excel_path"]
         yaml_config_path = setup_files["yaml_config_path"]
-        schema_path = setup_files["schema_path"] # スキーマを明示的に指定
+        schema_path = setup_files["schema_path"]  # スキーマを明示的に指定
 
-        result = self.run_cli_command([str(excel_path), "--config", str(yaml_config_path), "--schema", str(schema_path)])
+        result = self.run_cli_command(
+            [str(excel_path), "--config", str(yaml_config_path), "--schema", str(schema_path)]
+        )
 
         # 終了コードが0（正常終了）
         assert result.returncode == 0
@@ -275,9 +275,11 @@ class TestCLI:
         """有効なJSON設定ファイルでの実行テスト"""
         excel_path = setup_files["excel_path"]
         json_config_path = setup_files["json_config_path"]
-        schema_path = setup_files["schema_path"] # スキーマを明示的に指定
+        schema_path = setup_files["schema_path"]  # スキーマを明示的に指定
 
-        result = self.run_cli_command([str(excel_path), "--config", str(json_config_path), "--schema", str(schema_path)])
+        result = self.run_cli_command(
+            [str(excel_path), "--config", str(json_config_path), "--schema", str(schema_path)]
+        )
 
         # 終了コードが0（正常終了）
         assert result.returncode == 0
@@ -294,16 +296,18 @@ class TestCLI:
         """無効な設定ファイルでの実行テスト (スキーマ違反)"""
         excel_path = setup_files["excel_path"]
         invalid_config_path = setup_files["invalid_config_path"]
-        schema_path = setup_files["schema_path"] # スキーマを指定
+        schema_path = setup_files["schema_path"]  # スキーマを指定
 
-        result = self.run_cli_command([str(excel_path), "--config", str(invalid_config_path), "--schema", str(schema_path)])
+        result = self.run_cli_command(
+            [str(excel_path), "--config", str(invalid_config_path), "--schema", str(schema_path)]
+        )
 
         # 終了コードが1（エラー終了）
         assert result.returncode == 1
         # エラーメッセージに「設定ファイルの検証に失敗しました」が含まれる (cli.pyの修正による変更)
         assert "設定ファイルの検証に失敗しました" in result.stderr
         # 具体的なスキーマ違反メッセージも確認 (jsonschemaのメッセージに依存)
-        assert "'output' is a required property" in result.stderr # required 違反
+        assert "'output' is a required property" in result.stderr  # required 違反
         # assert "InvalidFormat" in result.stderr # pattern 違反 (jsonschema は最初の違反で止まることがある)
 
     def test_nonexistent_excel(self, setup_files):
@@ -320,15 +324,17 @@ class TestCLI:
     def test_nonexistent_config(self, setup_files):
         """存在しない設定ファイルでの実行テスト"""
         excel_path = setup_files["excel_path"]
-        schema_path = setup_files["schema_path"] # スキーマを明示的に指定
+        schema_path = setup_files["schema_path"]  # スキーマを明示的に指定
 
-        result = self.run_cli_command([str(excel_path), "--config", "nonexistent_config.yaml", "--schema", str(schema_path)])
+        result = self.run_cli_command(
+            [str(excel_path), "--config", "nonexistent_config.yaml", "--schema", str(schema_path)]
+        )
 
         # 終了コードが1（エラー終了）
         assert result.returncode == 1
         # エラーメッセージに「設定ファイルの読み込みに失敗しました」が含まれる
         assert "設定ファイルの読み込みに失敗しました" in result.stderr
-        assert "nonexistent_config.yaml" in result.stderr # ファイル名が含まれるか
+        assert "nonexistent_config.yaml" in result.stderr  # ファイル名が含まれるか
 
     def test_output_to_file(self, setup_files, tmp_path):
         """ファイル出力オプションでの実行テスト"""
@@ -336,9 +342,17 @@ class TestCLI:
         yaml_config_path = setup_files["yaml_config_path"]
         output_path = tmp_path / "output.json"
 
-        schema_path = setup_files["schema_path"] # スキーマを明示的に指定
+        schema_path = setup_files["schema_path"]  # スキーマを明示的に指定
         result = self.run_cli_command(
-            [str(excel_path), "--config", str(yaml_config_path), "--schema", str(schema_path), "--output", str(output_path)]
+            [
+                str(excel_path),
+                "--config",
+                str(yaml_config_path),
+                "--schema",
+                str(schema_path),
+                "--output",
+                str(output_path),
+            ]
         )
 
         # 終了コードが0（正常終了）
@@ -357,9 +371,11 @@ class TestCLI:
         """標準出力オプションでの実行テスト（明示的に指定なし）"""
         excel_path = setup_files["excel_path"]
         yaml_config_path = setup_files["yaml_config_path"]
-        schema_path = setup_files["schema_path"] # スキーマを明示的に指定
+        schema_path = setup_files["schema_path"]  # スキーマを明示的に指定
 
-        result = self.run_cli_command([str(excel_path), "--config", str(yaml_config_path), "--schema", str(schema_path)])
+        result = self.run_cli_command(
+            [str(excel_path), "--config", str(yaml_config_path), "--schema", str(schema_path)]
+        )
 
         # 終了コードが0（正常終了）
         assert result.returncode == 0
@@ -406,7 +422,7 @@ class TestCLI:
         with open(config_path, "w", encoding="utf-8") as f:
             yaml.dump(config_data, f)
 
-        schema_path = setup_files["schema_path"] # スキーマを明示的に指定
+        schema_path = setup_files["schema_path"]  # スキーマを明示的に指定
         # 空セル含めないオプションなし実行
         result1 = self.run_cli_command([str(excel_path), "--config", str(config_path), "--schema", str(schema_path)])
 
@@ -418,7 +434,9 @@ class TestCLI:
         assert "empty_cell" not in output_data1
 
         # 空セル含むオプション実行
-        result2 = self.run_cli_command([str(excel_path), "--config", str(config_path), "--schema", str(schema_path), "--include-empty-cells"])
+        result2 = self.run_cli_command(
+            [str(excel_path), "--config", str(config_path), "--schema", str(schema_path), "--include-empty-cells"]
+        )
 
         # 終了コードが0（正常終了）
         assert result2.returncode == 0
@@ -432,10 +450,12 @@ class TestCLI:
         """エラー無視オプションでの実行テスト (設定ファイル読み込みエラー)"""
         invalid_config_path = setup_files["invalid_config_path"]
         excel_path = setup_files["excel_path"]
-        schema_path = setup_files["schema_path"] # スキーマを指定
+        schema_path = setup_files["schema_path"]  # スキーマを指定
 
         # 無効な設定ファイルでエラー無視なしの場合
-        result1 = self.run_cli_command([str(excel_path), "--config", str(invalid_config_path), "--schema", str(schema_path)])
+        result1 = self.run_cli_command(
+            [str(excel_path), "--config", str(invalid_config_path), "--schema", str(schema_path)]
+        )
 
         # 終了コードが1（エラー終了）
         assert result1.returncode == 1
@@ -443,7 +463,9 @@ class TestCLI:
         assert "設定ファイルの検証に失敗しました" in result1.stderr
 
         # 無効な設定ファイルでエラー無視ありの場合
-        result2 = self.run_cli_command([str(excel_path), "--config", str(invalid_config_path), "--schema", str(schema_path), "--ignore-errors"])
+        result2 = self.run_cli_command(
+            [str(excel_path), "--config", str(invalid_config_path), "--schema", str(schema_path), "--ignore-errors"]
+        )
 
         # エラーメッセージは出るが終了コードは0（正常終了）
         assert result2.returncode == 0
@@ -455,16 +477,17 @@ class TestCLI:
         try:
             json.loads(result2.stdout)
         except json.JSONDecodeError:
-             pytest.fail("エラー無視時に最低限の出力がされませんでした")
-
+            pytest.fail("エラー無視時に最低限の出力がされませんでした")
 
     def test_validation_success(self, setup_files):
         """バリデーション成功時のテスト"""
         excel_path = setup_files["excel_path"]
         validation_config_path = setup_files["validation_config_path"]
-        schema_path = setup_files["schema_path"] # スキーマを明示的に指定
+        schema_path = setup_files["schema_path"]  # スキーマを明示的に指定
 
-        result = self.run_cli_command([str(excel_path), "--config", str(validation_config_path), "--schema", str(schema_path)])
+        result = self.run_cli_command(
+            [str(excel_path), "--config", str(validation_config_path), "--schema", str(schema_path)]
+        )
 
         # 終了コードが0（正常終了）
         assert result.returncode == 0
@@ -480,9 +503,11 @@ class TestCLI:
         """バリデーション失敗時のテスト"""
         excel_path = setup_files["excel_path"]
         failing_validation_config_path = setup_files["failing_validation_config_path"]
-        schema_path = setup_files["schema_path"] # スキーマを明示的に指定
+        schema_path = setup_files["schema_path"]  # スキーマを明示的に指定
 
-        result = self.run_cli_command([str(excel_path), "--config", str(failing_validation_config_path), "--schema", str(schema_path)])
+        result = self.run_cli_command(
+            [str(excel_path), "--config", str(failing_validation_config_path), "--schema", str(schema_path)]
+        )
 
         # 終了コードが1（エラー終了）
         assert result.returncode == 1
@@ -499,9 +524,11 @@ class TestCLI:
         """バリデーションのみモード成功時のテスト"""
         excel_path = setup_files["excel_path"]
         validation_config_path = setup_files["validation_config_path"]
-        schema_path = setup_files["schema_path"] # スキーマを明示的に指定
+        schema_path = setup_files["schema_path"]  # スキーマを明示的に指定
 
-        result = self.run_cli_command([str(excel_path), "--config", str(validation_config_path), "--schema", str(schema_path), "--validate-only"])
+        result = self.run_cli_command(
+            [str(excel_path), "--config", str(validation_config_path), "--schema", str(schema_path), "--validate-only"]
+        )
 
         # 終了コードが0（正常終了）
         assert result.returncode == 0
@@ -514,10 +541,17 @@ class TestCLI:
         """バリデーションのみモード失敗時のテスト"""
         excel_path = setup_files["excel_path"]
         failing_validation_config_path = setup_files["failing_validation_config_path"]
-        schema_path = setup_files["schema_path"] # スキーマを明示的に指定
+        schema_path = setup_files["schema_path"]  # スキーマを明示的に指定
 
         result = self.run_cli_command(
-            [str(excel_path), "--config", str(failing_validation_config_path), "--schema", str(schema_path), "--validate-only"]
+            [
+                str(excel_path),
+                "--config",
+                str(failing_validation_config_path),
+                "--schema",
+                str(schema_path),
+                "--validate-only",
+            ]
         )
 
         # 終了コードが1（エラー終了）
@@ -534,10 +568,18 @@ class TestCLI:
         excel_path = setup_files["excel_path"]
         failing_validation_config_path = setup_files["failing_validation_config_path"]
         log_path = setup_files["log_path"]
-        schema_path = setup_files["schema_path"] # スキーマを明示的に指定
+        schema_path = setup_files["schema_path"]  # スキーマを明示的に指定
 
         result = self.run_cli_command(
-            [str(excel_path), "--config", str(failing_validation_config_path), "--schema", str(schema_path), "--log", str(log_path)]
+            [
+                str(excel_path),
+                "--config",
+                str(failing_validation_config_path),
+                "--schema",
+                str(schema_path),
+                "--log",
+                str(log_path),
+            ]
         )
 
         # 終了コードが1（エラー終了）
@@ -554,7 +596,7 @@ class TestCLI:
             assert log_data["error_count"] > 0
 
             # 少なくとも1つのバリデーション結果に適切な情報が含まれているか
-            result_log = log_data["validation_results"][0] # 変数名を変更 (result は subprocess の結果と衝突)
+            result_log = log_data["validation_results"][0]  # 変数名を変更 (result は subprocess の結果と衝突)
             assert "is_valid" in result_log
             assert "error_message" in result_log
             assert "error_fields" in result_log
@@ -567,17 +609,26 @@ class TestCLI:
         """バリデーション失敗時のエラー無視オプションテスト"""
         excel_path = setup_files["excel_path"]
         failing_validation_config_path = setup_files["failing_validation_config_path"]
-        schema_path = setup_files["schema_path"] # スキーマを明示的に指定
+        schema_path = setup_files["schema_path"]  # スキーマを明示的に指定
 
         # エラー無視なしの場合
-        result1 = self.run_cli_command([str(excel_path), "--config", str(failing_validation_config_path), "--schema", str(schema_path)])
+        result1 = self.run_cli_command(
+            [str(excel_path), "--config", str(failing_validation_config_path), "--schema", str(schema_path)]
+        )
 
         # 終了コードが1（エラー終了）
         assert result1.returncode == 1
 
         # エラー無視ありの場合
         result2 = self.run_cli_command(
-            [str(excel_path), "--config", str(failing_validation_config_path), "--schema", str(schema_path), "--ignore-errors"]
+            [
+                str(excel_path),
+                "--config",
+                str(failing_validation_config_path),
+                "--schema",
+                str(schema_path),
+                "--ignore-errors",
+            ]
         )
 
         # 終了コードが0（正常終了）
@@ -585,7 +636,10 @@ class TestCLI:
         # バリデーションエラーメッセージは表示される
         assert "バリデーションエラーが" in result2.stderr
         # エラー無視メッセージが表示される
-        assert "--ignore-errors オプションが指定されたため、バリデーションエラーを無視して処理を継続します" in result2.stderr # メッセージ変更
+        assert (
+            "--ignore-errors オプションが指定されたため、バリデーションエラーを無視して処理を継続します"
+            in result2.stderr
+        )  # メッセージ変更
         # 出力データも取得できる
         try:
             json.loads(result2.stdout)

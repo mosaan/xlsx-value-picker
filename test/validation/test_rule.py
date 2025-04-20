@@ -2,15 +2,13 @@
 Ruleのpytestテスト
 """
 
-import pytest
+from xlsx_value_picker.config_loader import Rule  # Rule は config_loader に残る
 
-from xlsx_value_picker.config_loader import Rule # Rule は config_loader に残る
 # Expression関連は validation_expressions からインポート
 from xlsx_value_picker.validation_expressions import CompareExpression
-from xlsx_value_picker.validation_common import ValidationContext, ValidationResult # これらは共通モジュールから
 
 
-def test_rule_valid(validation_context): # Use the common fixture
+def test_rule_valid(validation_context):  # Use the common fixture
     # The expression (age >= 20) is True because age is 25.
     rule = Rule(
         name="年齢チェック",
@@ -21,7 +19,7 @@ def test_rule_valid(validation_context): # Use the common fixture
     assert result.is_valid
 
 
-def test_rule_invalid(validation_context): # Use the common fixture
+def test_rule_invalid(validation_context):  # Use the common fixture
     # The expression (age >= 30) is False because age is 25.
     rule = Rule(
         name="年齢チェック",

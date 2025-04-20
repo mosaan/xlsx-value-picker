@@ -45,27 +45,27 @@ class TestExcelValueExtractor:
         # __init__ ではファイルを開かないので workbook は None のはず
         extractor = ExcelValueExtractor(excel_file)
         assert extractor.excel_path.name == "test.xlsx"
-        assert extractor.workbook is None # workbook は None であることを確認
+        assert extractor.workbook is None  # workbook は None であることを確認
 
     def test_init_nonexistent_file(self):
         """存在しないファイルで初期化してもエラーにならないことをテスト"""
         # __init__ ではファイルを開かないのでエラーにならない
         try:
-             ExcelValueExtractor("nonexistent.xlsx")
+            ExcelValueExtractor("nonexistent.xlsx")
         except Exception as e:
-             pytest.fail(f"初期化時に予期せぬエラーが発生しました: {e}")
+            pytest.fail(f"初期化時に予期せぬエラーが発生しました: {e}")
 
     def test_context_manager_success(self, excel_file):
         """コンテキストマネージャが正常に動作することをテスト"""
         with ExcelValueExtractor(excel_file) as extractor:
-            assert extractor.workbook is not None # ファイルが開かれている
-        assert extractor.workbook is None # ファイルが閉じられている
+            assert extractor.workbook is not None  # ファイルが開かれている
+        assert extractor.workbook is None  # ファイルが閉じられている
 
     def test_context_manager_file_not_found(self):
         """コンテキストマネージャで存在しないファイルを開くとエラーになることをテスト"""
         with pytest.raises(ExcelProcessingError) as excinfo:
-            with ExcelValueExtractor("nonexistent.xlsx") as extractor:
-                 pass # ここには到達しないはず
+            with ExcelValueExtractor("nonexistent.xlsx"):
+                pass  # ここには到達しないはず
         assert "Excelファイルが見つかりません" in str(excinfo.value)
 
     def test_extract_values(self, excel_file):
@@ -110,7 +110,7 @@ class TestExcelValueExtractor:
             assert extractor._get_cell_value("Sheet1!A1") == 100
             assert extractor._get_cell_value("Sheet1!C3") == "テスト"
             assert extractor._get_cell_value("Sheet2!A1") == "Sheet2値1"
-            assert extractor._get_cell_value("Sheet1!D4") is None # 空セル
+            assert extractor._get_cell_value("Sheet1!D4") is None  # 空セル
 
     def test_get_cell_value_invalid_sheet(self, excel_file):
         """存在しないシートを参照するとExcelProcessingErrorが発生することをテスト"""
@@ -162,16 +162,16 @@ class TestExcelValueExtractor:
         with pytest.raises(Exception) as excinfo:
             get_excel_values("nonexistent.xlsx", {"val1": "Sheet1!A1"})
         assert "Excel値の取得中にエラーが発生しました" in str(excinfo.value)
-        assert "Excelファイルが見つかりません" in str(excinfo.value.__cause__) # 元の例外を確認
+        assert "Excelファイルが見つかりません" in str(excinfo.value.__cause__)  # 元の例外を確認
 
         # 不正なマッピング (一時ファイル作成)
         with pytest.raises(Exception) as excinfo:
-             # 一時的な有効なExcelファイルを作成
-             temp_excel = Path("temp_valid.xlsx")
-             create_test_excel(temp_excel)
-             try:
-                 get_excel_values(str(temp_excel), {"val1": "InvalidSheet!A1"})
-             finally:
-                 temp_excel.unlink() # テスト後にファイルを削除
+            # 一時的な有効なExcelファイルを作成
+            temp_excel = Path("temp_valid.xlsx")
+            create_test_excel(temp_excel)
+            try:
+                get_excel_values(str(temp_excel), {"val1": "InvalidSheet!A1"})
+            finally:
+                temp_excel.unlink()  # テスト後にファイルを削除
         assert "Excel値の取得中にエラーが発生しました" in str(excinfo.value)
         assert "シートが見つかりません" in str(excinfo.value.__cause__)

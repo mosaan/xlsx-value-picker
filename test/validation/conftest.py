@@ -23,7 +23,7 @@ def validation_context():
             "none_value": None,
             "number_value": 123,
             "selection": "その他",
-            "comment": None, # 初期値はNone
+            "comment": None,  # 初期値はNone
         },
         field_locations={
             "name": "Sheet1!A1",
@@ -36,7 +36,7 @@ def validation_context():
             "empty_string": "Sheet1!G1",
             "none_value": "Sheet1!H1",
             "number_value": "Sheet1!I1",
-            "missing_field": "Sheet1!J1", # 存在しないフィールドの場所
+            "missing_field": "Sheet1!J1",  # 存在しないフィールドの場所
             "selection": "Sheet1!K1",
             "comment": "Sheet1!L1",
         },

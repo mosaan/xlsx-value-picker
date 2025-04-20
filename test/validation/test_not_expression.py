@@ -2,14 +2,11 @@
 NotExpressionのpytestテスト
 """
 
-import pytest
-
 # Expression関連は validation_expressions からインポート
 from xlsx_value_picker.validation_expressions import CompareExpression, NotExpression
-from xlsx_value_picker.validation_common import ValidationContext, ValidationResult # これらは共通モジュールから
 
 
-def test_not_valid(validation_context): # Use the common fixture
+def test_not_valid(validation_context):  # Use the common fixture
     # The inner expression (age < 20) is False because age is 25.
     # So, NotExpression should be True.
     expr = NotExpression.model_validate(
@@ -19,7 +16,7 @@ def test_not_valid(validation_context): # Use the common fixture
     assert result.is_valid
 
 
-def test_not_invalid(validation_context): # Use the common fixture
+def test_not_invalid(validation_context):  # Use the common fixture
     # The inner expression (age > 20) is True because age is 25.
     # So, NotExpression should be False.
     expr = NotExpression.model_validate(

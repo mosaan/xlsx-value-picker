@@ -36,7 +36,9 @@ class ExcelValueExtractor:
         except InvalidFileException as e:
             raise ExcelProcessingError(f"Excelファイル形式が無効です: {self.excel_path} - {e}")
         except Exception as e:
-            raise ExcelProcessingError(f"Excelファイルの読み込み中に予期せぬエラーが発生しました: {self.excel_path} - {e}")
+            raise ExcelProcessingError(
+                f"Excelファイルの読み込み中に予期せぬエラーが発生しました: {self.excel_path} - {e}"
+            )
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         """コンテキストマネージャの終了時にワークブックを閉じる"""
@@ -57,7 +59,9 @@ class ExcelValueExtractor:
             ExcelProcessingError: ワークブックが開かれていない場合
         """
         if self.workbook is None:
-            raise ExcelProcessingError("Excelワークブックが開かれていません。コンテキストマネージャを使用してください。")
+            raise ExcelProcessingError(
+                "Excelワークブックが開かれていません。コンテキストマネージャを使用してください。"
+            )
 
         result = {}
         for field_name, cell_ref in config.fields.items():

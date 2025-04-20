@@ -6,7 +6,6 @@ import pytest
 
 # Expression関連は validation_expressions からインポート
 from xlsx_value_picker.validation_expressions import CompareExpression
-from xlsx_value_picker.validation_common import ValidationContext, ValidationResult # これらは共通モジュールから
 
 
 class TestCompareExpression:
@@ -37,14 +36,10 @@ class TestCompareExpression:
             ("missing_field", "!=", None, False),
         ],
     )
-    def test_comparison_operators(
-        self, validation_context, left_field, operator, right_value, expected_valid
-    ):
+    def test_comparison_operators(self, validation_context, left_field, operator, right_value, expected_valid):
         """Test various comparison operators with different values."""
         expr = CompareExpression(compare={"left": left_field, "operator": operator, "right": right_value})
-        result = expr.validate(
-            validation_context, "{left_field} {operator} {right_value} の比較が失敗しました"
-        )
+        result = expr.validate(validation_context, "{left_field} {operator} {right_value} の比較が失敗しました")
         assert result.is_valid == expected_valid
         if not expected_valid:
             assert result.error_fields == [left_field]

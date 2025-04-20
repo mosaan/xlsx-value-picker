@@ -3,13 +3,12 @@
 """
 
 import json
-import os
 import sys
 from pathlib import Path
 
 import pytest
 import yaml
-from pydantic import ValidationError as PydanticValidationError # PydanticValidationError をインポート
+from pydantic import ValidationError as PydanticValidationError  # PydanticValidationError をインポート
 
 # テスト対象モジュールへのパスを追加
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
@@ -24,12 +23,6 @@ from xlsx_value_picker.config_loader import (
 )
 from xlsx_value_picker.exceptions import ConfigLoadError, ConfigValidationError
 from xlsx_value_picker.validation_expressions import (
-    AllOfExpression,
-    AnyOfExpression,
-    CompareExpression,
-    EnumExpression,
-    NotExpression,
-    RegexMatchExpression,
     RequiredExpression,
 )
 
@@ -50,36 +43,34 @@ def create_valid_json(path):
 def create_invalid_yaml(path):
     # 不正なYAML形式
     with open(path, "w", encoding="utf-8") as f:
-        f.write("key1: value1\nkey2: [value2") # 閉じ括弧がない
+        f.write("key1: value1\nkey2: [value2")  # 閉じ括弧がない
 
 
 def create_invalid_json(path):
     # 不正なJSON形式
     with open(path, "w", encoding="utf-8") as f:
-        f.write('{"key1": "value1", "key2": ') # 値がない
+        f.write('{"key1": "value1", "key2": ')  # 値がない
 
 
 def create_valid_schema(path):
     schema = {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
-        "properties": {
-            "fields": {"type": "object"},
-            "rules": {"type": "array"},
-            "output": {"type": "object"}
-        },
+        "properties": {"fields": {"type": "object"}, "rules": {"type": "array"}, "output": {"type": "object"}},
         "required": ["fields", "rules", "output"],
     }
     with open(path, "w", encoding="utf-8") as f:
         json.dump(schema, f)
 
+
 def create_invalid_schema(path):
     # 不正なJSON形式のスキーマ
-     with open(path, "w", encoding="utf-8") as f:
+    with open(path, "w", encoding="utf-8") as f:
         f.write('{"type": "object", "properties": ')
 
 
 # --- テストクラス ---
+
 
 class TestConfigParser:
     """ConfigParserクラスのテスト"""
@@ -181,7 +172,7 @@ class TestSchemaValidator:
     def test_validate_failure(self, valid_schema_file):
         """スキーマに準拠しないデータでConfigValidationErrorが発生することをテスト"""
         validator = SchemaValidator(valid_schema_file)
-        invalid_data = {"fields": {"key": "Sheet1!A1"}, "rules": []} # output がない
+        invalid_data = {"fields": {"key": "Sheet1!A1"}, "rules": []}  # output がない
         with pytest.raises(ConfigValidationError) as excinfo:
             validator.validate(invalid_data)
         assert "設定ファイルのスキーマ検証に失敗しました" in str(excinfo.value)
@@ -243,7 +234,6 @@ class TestPydanticModels:
             OutputFormat(format="xml")
         assert "サポートされていない出力形式です" in str(excinfo3.value)
 
-
     def test_config_model_validation(self):
         """ConfigModelモデルのバリデーションテスト"""
         # 正常系
@@ -252,7 +242,7 @@ class TestPydanticModels:
             "rules": [
                 {"name": "ルール1", "expression": {"field": "field1", "required": True}, "error_message": "必須"}
             ],
-            "output": {"format": "yaml"}
+            "output": {"format": "yaml"},
         }
         model = ConfigModel.model_validate(valid_data)
         assert len(model.fields) == 2
@@ -263,16 +253,15 @@ class TestPydanticModels:
         invalid_data1 = {"fields": {}, "rules": [], "output": {"format": "json"}}
         # 修正: ConfigValidationError -> PydanticValidationError
         with pytest.raises(PydanticValidationError) as excinfo1:
-             ConfigModel.model_validate(invalid_data1)
+            ConfigModel.model_validate(invalid_data1)
         # assert "少なくとも1つのフィールド定義が必要" in str(excinfo1.value) # Pydantic V2 のエラーメッセージを確認
         assert "Value error, 少なくとも1つのフィールド定義が必要です" in str(excinfo1.value)
-
 
         # 異常系 (不正なセル参照)
         invalid_data2 = {"fields": {"f1": "Sheet1A1"}, "rules": [], "output": {"format": "json"}}
         # 修正: ConfigValidationError -> PydanticValidationError
         with pytest.raises(PydanticValidationError) as excinfo2:
-             ConfigModel.model_validate(invalid_data2)
+            ConfigModel.model_validate(invalid_data2)
         # assert "無効なセル参照形式です" in str(excinfo2.value) # Pydantic V2 のエラーメッセージを確認
         assert "Value error, 無効なセル参照形式です" in str(excinfo2.value)
 
@@ -343,7 +332,6 @@ class TestConfigLoader:
         # assert "少なくとも1つのフィールド定義が必要" in str(excinfo.value) # Pydantic V2 の詳細メッセージを確認
         assert "Value error, 少なくとも1つのフィールド定義が必要です" in str(excinfo.value)
 
-
     def test_load_config_default_schema(self, valid_config_file, monkeypatch):
         """デフォルトスキーマパスが使用されることをテスト"""
         # デフォルトスキーマパスが存在するように見せかける
@@ -352,17 +340,17 @@ class TestConfigLoader:
         # デフォルトパスに有効なスキーマファイルを作成
         create_valid_schema(default_path)
 
-        loader = ConfigLoader() # schema_path を指定しない
+        loader = ConfigLoader()  # schema_path を指定しない
         try:
             loader.load_config(valid_config_file)
         except (ConfigLoadError, ConfigValidationError) as e:
             pytest.fail(f"デフォルトスキーマでの読み込みに失敗しました: {e}")
         finally:
-             # 作成したダミースキーマを削除
-             if Path(default_path).exists():
-                 Path(default_path).unlink()
-             # 作成したディレクトリも削除 (空の場合)
-             try:
-                 Path(default_path).parent.rmdir()
-             except OSError:
-                 pass # 空でない場合は無視
+            # 作成したダミースキーマを削除
+            if Path(default_path).exists():
+                Path(default_path).unlink()
+            # 作成したディレクトリも削除 (空の場合)
+            try:
+                Path(default_path).parent.rmdir()
+            except OSError:
+                pass  # 空でない場合は無視

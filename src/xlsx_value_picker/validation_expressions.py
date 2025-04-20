@@ -1,6 +1,7 @@
 """
 バリデーション式モデル定義
 """
+
 import re
 from abc import ABC, abstractmethod
 from typing import Any, ForwardRef
@@ -115,7 +116,7 @@ class CompareExpression(Expression):
                 is_valid=False,
                 error_message=msg,
                 error_fields=[left_field],
-                error_locations=locations # Add location
+                error_locations=locations,  # Add location
             )
 
 
@@ -147,13 +148,13 @@ class RequiredExpression(Expression):
         else:
             # エラーメッセージのフォーマット
             msg = error_message_template.format(field=target_field)
-            location = context.get_field_location(target_field) # Get location
-            locations = [location] if location else [] # Create list
+            location = context.get_field_location(target_field)  # Get location
+            locations = [location] if location else []  # Create list
             return ValidationResult(
                 is_valid=False,
                 error_message=msg,
                 error_fields=[target_field],
-                error_locations=locations # Add location
+                error_locations=locations,  # Add location
             )
 
 
@@ -190,7 +191,7 @@ class RegexMatchExpression(Expression):
 
         # 値がNoneの場合は無効とする（正規表現は通常文字列に対して動作するため）
         if value is None:
-             is_valid = False
+            is_valid = False
         else:
             # 値が文字列でない場合は文字列に変換
             if not isinstance(value, str):
@@ -202,9 +203,8 @@ class RegexMatchExpression(Expression):
             try:
                 is_valid = bool(re.match(pattern, value_str))
             except re.error:
-                 # パターン自体が無効な場合は Pydantic バリデータで検出されるはずだが念のため
-                 is_valid = False
-
+                # パターン自体が無効な場合は Pydantic バリデータで検出されるはずだが念のため
+                is_valid = False
 
         if is_valid:
             return ValidationResult(is_valid=True)
@@ -214,10 +214,7 @@ class RegexMatchExpression(Expression):
             location = context.get_field_location(target_field)
             locations = [location] if location else []
             return ValidationResult(
-                is_valid=False,
-                error_message=msg,
-                error_fields=[target_field],
-                error_locations=locations
+                is_valid=False, error_message=msg, error_fields=[target_field], error_locations=locations
             )
 
 
@@ -265,10 +262,7 @@ class EnumExpression(Expression):
             location = context.get_field_location(target_field)
             locations = [location] if location else []
             return ValidationResult(
-                is_valid=False,
-                error_message=msg,
-                error_fields=[target_field],
-                error_locations=locations
+                is_valid=False, error_message=msg, error_fields=[target_field], error_locations=locations
             )
 
 
@@ -318,7 +312,7 @@ def detect_expression_type(data: dict[str, Any]) -> type[Expression]:
         # デフォルトまたは不明な型の場合、基底クラスを返すかエラーを発生させるか検討
         # ここでは基底クラスを返すが、より厳密にするならValueErrorが良いかもしれない
         # raise ValueError(f"不明な式型です: {data}")
-        return Expression # または適切なデフォルト処理
+        return Expression  # または適切なデフォルト処理
 
 
 def convert_expression(data: dict[str, Any] | Expression) -> ExpressionType:
@@ -375,7 +369,7 @@ class AllOfExpression(Expression):
             ValidationResult: バリデーション結果
         """
         # すべての条件を評価
-        results = [expr.validate(context, "") for expr in self.all_of] # Use a neutral template for sub-expressions
+        results = [expr.validate(context, "") for expr in self.all_of]  # Use a neutral template for sub-expressions
 
         # すべての条件が有効であれば有効
         if all(r.is_valid for r in results):
@@ -384,23 +378,23 @@ class AllOfExpression(Expression):
             # エラーがあった条件のフィールドと場所を集める
             all_error_fields = []
             all_error_locations = []
-            sub_error_messages = [] # Collect sub-error messages if needed
-            for i, result in enumerate(results):
+            for _, result in enumerate(results):
                 if not result.is_valid:
                     if result.error_fields:
                         all_error_fields.extend(result.error_fields)
                     # Add locations based on the fields from the failed sub-expression
                     if result.error_fields:
-                        locations = [context.get_field_location(f) for f in result.error_fields if context.get_field_location(f)]
+                        locations = [
+                            context.get_field_location(f) for f in result.error_fields if context.get_field_location(f)
+                        ]
                         all_error_locations.extend(locations)
                     # Optionally collect sub-messages
                     # if result.error_message:
                     #    sub_error_messages.append(f"Condition {i+1} failed: {result.error_message}")
 
-
             # 重複を排除
-            unique_error_fields = sorted(list(set(all_error_fields)))
-            unique_error_locations = sorted(list(set(all_error_locations)))
+            unique_error_fields = sorted(set(all_error_fields))
+            unique_error_locations = sorted(set(all_error_locations))
 
             # エラーメッセージのフォーマット (Main message + optional sub-messages)
             msg = error_message_template
@@ -411,7 +405,7 @@ class AllOfExpression(Expression):
                 is_valid=False,
                 error_message=msg,
                 error_fields=unique_error_fields,
-                error_locations=unique_error_locations
+                error_locations=unique_error_locations,
             )
 
 
@@ -462,11 +456,11 @@ class AnyOfExpression(Expression):
                     if result.error_fields:
                         all_error_fields.extend(result.error_fields)
                     if result.error_locations:
-                         all_error_locations.extend(result.error_locations)
+                        all_error_locations.extend(result.error_locations)
 
             # 重複を排除
-            unique_error_fields = sorted(list(set(all_error_fields)))
-            unique_error_locations = sorted(list(set(all_error_locations)))
+            unique_error_fields = sorted(set(all_error_fields))
+            unique_error_locations = sorted(set(all_error_locations))
 
             # エラーメッセージのフォーマット
             msg = error_message_template
@@ -474,7 +468,7 @@ class AnyOfExpression(Expression):
                 is_valid=False,
                 error_message=msg,
                 error_fields=unique_error_fields,
-                error_locations=unique_error_locations
+                error_locations=unique_error_locations,
             )
 
 
@@ -520,8 +514,8 @@ class NotExpression(Expression):
             return ValidationResult(
                 is_valid=False,
                 error_message=msg,
-                error_fields=[], # Not式自体に紐づくフィールドはない
-                error_locations=[] # Not式自体に紐づく場所はない
+                error_fields=[],  # Not式自体に紐づくフィールドはない
+                error_locations=[],  # Not式自体に紐づく場所はない
             )
 
 

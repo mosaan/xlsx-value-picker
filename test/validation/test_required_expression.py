@@ -6,8 +6,6 @@ import pytest
 
 # Expression関連は validation_expressions からインポート
 from xlsx_value_picker.validation_expressions import RequiredExpression
-from xlsx_value_picker.validation_common import ValidationContext, ValidationResult # これらは共通モジュールから
-
 
 # Remove the context fixture, it's now in conftest.py
 
@@ -16,20 +14,18 @@ from xlsx_value_picker.validation_common import ValidationContext, ValidationRes
     "field, required, expected_valid, test_value_override",
     [
         # required=True cases
-        ("name", True, True, None),         # Valid: field exists and is not empty
-        ("empty_string", True, False, None), # Invalid: field exists but is empty string
-        ("none_value", True, False, None),   # Invalid: field exists but is None
-        ("missing_field", True, False, None),# Invalid: field does not exist in context
+        ("name", True, True, None),  # Valid: field exists and is not empty
+        ("empty_string", True, False, None),  # Invalid: field exists but is empty string
+        ("none_value", True, False, None),  # Invalid: field exists but is None
+        ("missing_field", True, False, None),  # Invalid: field does not exist in context
         # required=False cases
-        ("name", False, True, None),         # Valid: field exists (value doesn't matter)
-        ("empty_string", False, True, None), # Valid: field exists (value doesn't matter)
-        ("none_value", False, True, None),   # Valid: field exists (value doesn't matter)
-        ("missing_field", False, True, None),# Valid: field does not exist, but not required
+        ("name", False, True, None),  # Valid: field exists (value doesn't matter)
+        ("empty_string", False, True, None),  # Valid: field exists (value doesn't matter)
+        ("none_value", False, True, None),  # Valid: field exists (value doesn't matter)
+        ("missing_field", False, True, None),  # Valid: field does not exist, but not required
     ],
 )
-def test_required_expression(
-    validation_context, field, required, expected_valid, test_value_override
-):
+def test_required_expression(validation_context, field, required, expected_valid, test_value_override):
     """Test RequiredExpression with various scenarios using parametrization."""
     # Override context value if specified for the test case
     if test_value_override is not None:
@@ -43,6 +39,7 @@ def test_required_expression(
         assert result.error_fields == [field]
         expected_message = f"{field}は必須項目です"
         assert result.error_message == expected_message
+
 
 # Remove individual test functions as they are covered by parametrization
 # def test_required_valid(context):

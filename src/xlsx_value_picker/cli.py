@@ -7,12 +7,10 @@ import click
 from .config_loader import ConfigLoader, ConfigModel, OutputFormat
 from .excel_processor import ExcelValueExtractor
 from .exceptions import (
-    ConfigError,
     ConfigLoadError,
     ConfigValidationError,
     ExcelProcessingError,
     OutputError,
-    ValidationError,
     XlsxValuePickerError,
 )
 from .output_formatter import OutputFormatter
@@ -96,7 +94,7 @@ def main(
             # (スキーマがないと最低限の動作も保証できないため)
             click.echo(f"スキーマファイルの読み込みに失敗しました: {e}", err=True)
             sys.exit(1)
-        except Exception as e: # 予期せぬ初期化エラー
+        except Exception as e:  # 予期せぬ初期化エラー
             click.echo(f"ConfigLoader の初期化中に予期せぬエラーが発生しました: {e}", err=True)
             sys.exit(1)
 
@@ -104,40 +102,38 @@ def main(
         try:
             # config_loader は上で初期化成功しているはず
             config_model = config_loader.load_config(config)
-        except ConfigLoadError as e: # 設定ファイルが見つからない、パースできないなど
-             _handle_error(e, ignore_errors, "設定ファイルの読み込みに失敗しました")
-             if ignore_errors:
-                 click.echo("最低限の設定で処理を継続します", err=True)
-                 config_model = ConfigModel(fields={"dummy": "Sheet1!A1"}, rules=[], output=OutputFormat(format="json"))
-             else:
-                 return # exit しなかった場合は終了
-        except ConfigValidationError as e: # スキーマ検証、モデル検証エラー
-             _handle_error(e, ignore_errors, "設定ファイルの検証に失敗しました")
-             if ignore_errors:
-                 click.echo("最低限の設定で処理を継続します", err=True)
-                 config_model = ConfigModel(fields={"dummy": "Sheet1!A1"}, rules=[], output=OutputFormat(format="json"))
-             else:
-                 return # exit しなかった場合は終了
-        except Exception as e: # 予期せぬ読み込み/検証エラー
-             _handle_error(e, ignore_errors, "設定ファイルの処理中に予期せぬエラーが発生しました")
-             if ignore_errors:
-                 click.echo("最低限の設定で処理を継続します", err=True)
-                 config_model = ConfigModel(fields={"dummy": "Sheet1!A1"}, rules=[], output=OutputFormat(format="json"))
-             else:
-                 return # exit しなかった場合は終了
-
+        except ConfigLoadError as e:  # 設定ファイルが見つからない、パースできないなど
+            _handle_error(e, ignore_errors, "設定ファイルの読み込みに失敗しました")
+            if ignore_errors:
+                click.echo("最低限の設定で処理を継続します", err=True)
+                config_model = ConfigModel(fields={"dummy": "Sheet1!A1"}, rules=[], output=OutputFormat(format="json"))
+            else:
+                return  # exit しなかった場合は終了
+        except ConfigValidationError as e:  # スキーマ検証、モデル検証エラー
+            _handle_error(e, ignore_errors, "設定ファイルの検証に失敗しました")
+            if ignore_errors:
+                click.echo("最低限の設定で処理を継続します", err=True)
+                config_model = ConfigModel(fields={"dummy": "Sheet1!A1"}, rules=[], output=OutputFormat(format="json"))
+            else:
+                return  # exit しなかった場合は終了
+        except Exception as e:  # 予期せぬ読み込み/検証エラー
+            _handle_error(e, ignore_errors, "設定ファイルの処理中に予期せぬエラーが発生しました")
+            if ignore_errors:
+                click.echo("最低限の設定で処理を継続します", err=True)
+                config_model = ConfigModel(fields={"dummy": "Sheet1!A1"}, rules=[], output=OutputFormat(format="json"))
+            else:
+                return  # exit しなかった場合は終了
 
         # config_model が None のチェック (ignore_errors=True でダミーが設定されるため、基本的には通らないはず)
         if config_model is None and not ignore_errors:
-             # このパスは load_config でエラーが発生し ignore_errors=False の場合に到達する可能性がある
-             click.echo("設定の読み込み/検証に失敗したため処理を中断します。", err=True)
-             # _handle_error で既に exit(1) しているはずだが念のため
-             sys.exit(1)
+            # このパスは load_config でエラーが発生し ignore_errors=False の場合に到達する可能性がある
+            click.echo("設定の読み込み/検証に失敗したため処理を中断します。", err=True)
+            # _handle_error で既に exit(1) しているはずだが念のため
+            sys.exit(1)
         elif config_model is None and ignore_errors:
-             # ignore_errors=True の場合、ダミーが設定されるはずなので、ここに来るのは想定外
-             click.echo("予期せぬエラー: 設定モデルが None ですが ignore_errors=True です。", err=True)
-             sys.exit(1) # 予期せぬ状態なので終了
-
+            # ignore_errors=True の場合、ダミーが設定されるはずなので、ここに来るのは想定外
+            click.echo("予期せぬエラー: 設定モデルが None ですが ignore_errors=True です。", err=True)
+            sys.exit(1)  # 予期せぬ状態なので終了
 
         # 3. バリデーションの実行 (ルールが存在する場合)
         has_validation_rules = len(config_model.rules) > 0
@@ -145,9 +141,9 @@ def main(
             try:
                 validation_engine = ValidationEngine(config_model.rules)
                 validation_results = validation_engine.validate(excel_file, config_model.fields)
-            except Exception as e: # ValidationEngine 内のエラーは汎用 Exception でキャッチ
-                 _handle_error(e, ignore_errors, "バリデーション実行中にエラーが発生しました")
-                 # ignore_errors=True の場合、validation_results は空のまま続行
+            except Exception as e:  # ValidationEngine 内のエラーは汎用 Exception でキャッチ
+                _handle_error(e, ignore_errors, "バリデーション実行中にエラーが発生しました")
+                # ignore_errors=True の場合、validation_results は空のまま続行
 
             # バリデーションエラー処理
             if validation_results:
@@ -163,23 +159,27 @@ def main(
                     click.echo("バリデーションのみモードで実行しました (エラーあり)", err=True)
                     if not ignore_errors:
                         sys.exit(1)
-                    return # ignore_errors=True ならここで終了
+                    return  # ignore_errors=True ならここで終了
 
                 # 通常モードでエラーがあり、ignore_errors=False なら終了
                 if not ignore_errors:
                     click.echo("バリデーションエラーが発生したため、処理を中止します", err=True)
-                    click.echo("エラーを無視して処理を継続するには --ignore-errors オプションを指定してください", err=True)
+                    click.echo(
+                        "エラーを無視して処理を継続するには --ignore-errors オプションを指定してください", err=True
+                    )
                     sys.exit(1)
                 else:
-                     click.echo("--ignore-errors オプションが指定されたため、バリデーションエラーを無視して処理を継続します", err=True)
+                    click.echo(
+                        "--ignore-errors オプションが指定されたため、バリデーションエラーを無視して処理を継続します",
+                        err=True,
+                    )
 
         # バリデーションのみモードで成功した場合
         if validate_only:
-             if not validation_results: # エラーがなかった場合
-                 click.echo("バリデーションに成功しました", err=True)
-             # エラーがあっても ignore_errors=True ならここまで来るので return する
-             return
-
+            if not validation_results:  # エラーがなかった場合
+                click.echo("バリデーションに成功しました", err=True)
+            # エラーがあっても ignore_errors=True ならここまで来るので return する
+            return
 
         # 3. Excelファイルからの値取得
         try:
@@ -189,17 +189,16 @@ def main(
             _handle_error(e, ignore_errors, "Excelファイルからの値取得に失敗しました")
             if ignore_errors:
                 click.echo("空のデータで処理を継続します", err=True)
-                data = {} # 空のデータで続行
+                data = {}  # 空のデータで続行
             else:
-                return # エラーハンドリングで exit しなかった場合はここで終了
-        except Exception as e: # 予期せぬエラー
-             _handle_error(e, ignore_errors, "Excelファイル処理中に予期せぬエラーが発生しました")
-             if ignore_errors:
-                 click.echo("空のデータで処理を継続します", err=True)
-                 data = {}
-             else:
-                 return
-
+                return  # エラーハンドリングで exit しなかった場合はここで終了
+        except Exception as e:  # 予期せぬエラー
+            _handle_error(e, ignore_errors, "Excelファイル処理中に予期せぬエラーが発生しました")
+            if ignore_errors:
+                click.echo("空のデータで処理を継続します", err=True)
+                data = {}
+            else:
+                return
 
         # 4. 出力処理
         try:
@@ -210,9 +209,8 @@ def main(
             click.echo("処理が完了しました。", err=True)
         except OutputError as e:
             _handle_error(e, ignore_errors, "出力処理に失敗しました")
-        except Exception as e: # 予期せぬエラー
+        except Exception as e:  # 予期せぬエラー
             _handle_error(e, ignore_errors, "出力処理中に予期せぬエラーが発生しました")
-
 
     except XlsxValuePickerError as e:
         # 予期されるアプリケーションエラーの最終キャッチ
