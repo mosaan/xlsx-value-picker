@@ -5,8 +5,7 @@ JSONスキーマに基づく設定データ読み込み機能
 import json
 import os
 import re
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Union, ClassVar, Type, ForwardRef, cast
+from typing import Any, ClassVar, ForwardRef
 
 import jsonschema
 import yaml
@@ -40,7 +39,7 @@ class ConfigParser:
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"設定ファイルが見つかりません: {file_path}")
 
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             if file_path.endswith(".yaml") or file_path.endswith(".yml"):
                 return yaml.safe_load(f)
             elif file_path.endswith(".json"):
@@ -62,7 +61,7 @@ class SchemaValidator:
         if not os.path.exists(schema_path):
             raise FileNotFoundError(f"スキーマファイルが見つかりません: {schema_path}")
 
-        with open(schema_path, "r", encoding="utf-8") as f:
+        with open(schema_path, encoding="utf-8") as f:
             self.schema = json.load(f)
 
     def validate(self, config_data: dict) -> None:
@@ -109,7 +108,7 @@ class Expression(BaseModel, IExpression):
 class CompareExpression(Expression):
     """比較式"""
 
-    compare: Dict[str, Any]
+    compare: dict[str, Any]
 
     @field_validator("compare")
     def validate_compare(cls, v):
@@ -202,7 +201,7 @@ class RequiredExpression(Expression):
 class RegexMatchExpression(Expression):
     """正規表現マッチ式"""
 
-    regex_match: Dict[str, str]
+    regex_match: dict[str, str]
 
     @field_validator("regex_match")
     def validate_regex(cls, v):
@@ -253,7 +252,7 @@ class RegexMatchExpression(Expression):
 class EnumExpression(Expression):
     """列挙型式"""
 
-    enum: Dict[str, Any]
+    enum: dict[str, Any]
 
     @field_validator("enum")
     def validate_enum(cls, v):
@@ -342,7 +341,7 @@ def detect_expression_type(data: dict[str, Any]) -> type[Expression]:
         return Expression
 
 
-def convert_expression(data: Union[Dict[str, Any], Expression]) -> ExpressionType:
+def convert_expression(data: dict[str, Any] | Expression) -> ExpressionType:
     """
     辞書データまたはExpression型のオブジェクトを適切なExpression派生クラスに変換する
 
@@ -365,7 +364,7 @@ def convert_expression(data: Union[Dict[str, Any], Expression]) -> ExpressionTyp
 class AllOfExpression(Expression):
     """全条件一致式"""
 
-    all_of: List[ExpressionType]
+    all_of: list[ExpressionType]
 
     @model_validator(mode="before")
     @classmethod
@@ -418,7 +417,7 @@ class AllOfExpression(Expression):
 class AnyOfExpression(Expression):
     """いずれかの条件一致式"""
 
-    any_of: List[ExpressionType]
+    any_of: list[ExpressionType]
 
     @model_validator(mode="before")
     @classmethod
@@ -527,7 +526,7 @@ class Rule(BaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def validate_expression(cls, data: Dict[str, Any]):
+    def validate_expression(cls, data: dict[str, Any]):
         """式のデータを適切な型に変換する"""
         if isinstance(data, dict) and "expression" in data and isinstance(data["expression"], dict):
             data["expression"] = convert_expression(data["expression"])
@@ -557,8 +556,8 @@ class OutputFormat(BaseModel):
     """出力形式設定"""
 
     format: str = "json"
-    template_file: Optional[str] = None
-    template: Optional[str] = None
+    template_file: str | None = None
+    template: str | None = None
 
     @model_validator(mode="after")
     def check_jinja2_template(self):
@@ -578,8 +577,8 @@ class OutputFormat(BaseModel):
 class ConfigModel(BaseModel):
     """設定ファイルのモデル"""
 
-    fields: Dict[str, str]
-    rules: List[Rule]
+    fields: dict[str, str]
+    rules: list[Rule]
     output: OutputFormat = Field(default_factory=OutputFormat)
 
     @field_validator("fields")
@@ -590,7 +589,7 @@ class ConfigModel(BaseModel):
             raise ValueError("少なくとも1つのフィールド定義が必要です")
 
         pattern = r"^[^!]+![A-Z]+[0-9]+$"
-        for field_name, cell_addr in v.items():
+        for _, cell_addr in v.items():
             if not re.match(pattern, cell_addr):
                 raise ValueError(f"無効なセル参照形式です: {cell_addr}。正しい形式は 'Sheet1!A1' です。")
 

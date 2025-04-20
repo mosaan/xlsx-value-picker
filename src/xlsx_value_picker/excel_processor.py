@@ -3,7 +3,7 @@
 """
 
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 import openpyxl
 
@@ -13,7 +13,7 @@ from .config_loader import ConfigModel
 class ExcelValueExtractor:
     """設定に基づいてExcelファイルから値を抽出するクラス"""
 
-    def __init__(self, excel_path: Union[str, Path]):
+    def __init__(self, excel_path: str | Path):
         """
         初期化
 
@@ -27,7 +27,7 @@ class ExcelValueExtractor:
         # data_only=Trueは計算式の代わりに値を取得するために必要
         self.workbook = openpyxl.load_workbook(self.excel_path, data_only=True)
 
-    def extract_values(self, config: ConfigModel, include_empty_cells: bool = False) -> Dict[str, Any]:
+    def extract_values(self, config: ConfigModel, include_empty_cells: bool = False) -> dict[str, Any]:
         """
         設定に基づいてExcelファイルから値を抽出する
 
@@ -88,7 +88,7 @@ class ExcelValueExtractor:
 
 
 # ValidationEngine用の関数
-def get_excel_values(excel_file: str, field_mapping: Dict[str, str]) -> Dict[str, Any]:
+def get_excel_values(excel_file: str, field_mapping: dict[str, str]) -> dict[str, Any]:
     """
     Excelファイルからフィールドマッピングに基づいて値を取得する
 

@@ -330,7 +330,7 @@ class TestCLI:
         assert output_path.exists()
 
         # 出力ファイルの内容を確認
-        with open(output_path, "r", encoding="utf-8") as f:
+        with open(output_path, encoding="utf-8") as f:
             output_data = json.load(f)
             assert output_data["value1"] == 100
             assert output_data["value2"] == 200
@@ -507,7 +507,7 @@ class TestCLI:
         assert Path(log_path).exists()
 
         # ログファイルの内容を検証
-        with open(log_path, "r", encoding="utf-8") as f:
+        with open(log_path, encoding="utf-8") as f:
             log_data = json.load(f)
             assert log_data["is_valid"] is False
             assert "validation_results" in log_data

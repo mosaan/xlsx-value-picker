@@ -3,8 +3,9 @@ Ruleのpytestテスト
 """
 
 import pytest
+
+from xlsx_value_picker.config_loader import CompareExpression, Rule
 from xlsx_value_picker.validation_common import ValidationContext
-from xlsx_value_picker.config_loader import Rule, CompareExpression
 
 
 @pytest.fixture

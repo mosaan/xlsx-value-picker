@@ -3,8 +3,9 @@ AllOfExpressionのpytestテスト
 """
 
 import pytest
+
+from xlsx_value_picker.config_loader import AllOfExpression, CompareExpression, RegexMatchExpression, RequiredExpression
 from xlsx_value_picker.validation_common import ValidationContext
-from xlsx_value_picker.config_loader import AllOfExpression, CompareExpression, RequiredExpression, RegexMatchExpression
 
 
 @pytest.fixture

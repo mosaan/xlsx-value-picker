@@ -8,7 +8,7 @@
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Set, Union
+from typing import Any
 
 
 @dataclass
@@ -21,14 +21,14 @@ class ValidationContext:
         field_locations: フィールド名とExcelセル位置のマッピング
     """
 
-    cell_values: Dict[str, Any]
-    field_locations: Dict[str, str]
+    cell_values: dict[str, Any]
+    field_locations: dict[str, str]
 
     def get_field_value(self, field_name: str) -> Any:
         """指定されたフィールドの値を取得します"""
         return self.cell_values.get(field_name)
 
-    def get_field_location(self, field_name: str) -> Optional[str]:
+    def get_field_location(self, field_name: str) -> str | None:
         """指定されたフィールドのセル位置を取得します"""
         return self.field_locations.get(field_name)
 
@@ -48,11 +48,11 @@ class ValidationResult:
     """
 
     is_valid: bool
-    error_message: Optional[str] = None
-    error_fields: Optional[List[str]] = None
-    error_locations: Optional[List[str]] = None
+    error_message: str | None = None
+    error_fields: list[str] | None = None
+    error_locations: list[str] | None = None
     severity: str = "error"
-    rule_name: Optional[str] = None
+    rule_name: str | None = None
 
     def __post_init__(self):
         # error_fieldsが指定されていない場合は空のリストに初期化

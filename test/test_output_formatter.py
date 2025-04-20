@@ -4,7 +4,6 @@
 
 import json
 import sys
-import tempfile
 from pathlib import Path
 
 import pytest
@@ -13,7 +12,7 @@ import yaml
 # テスト対象モジュールへのパスを追加
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from xlsx_value_picker.config_loader import ConfigModel, OutputFormat, Rule, RequiredExpression
+from xlsx_value_picker.config_loader import ConfigModel, OutputFormat
 from xlsx_value_picker.output_formatter import OutputFormatter
 
 
@@ -166,7 +165,7 @@ class TestOutputFormatter:
         assert output_path.exists()
 
         # 内容を確認
-        with open(output_path, "r", encoding="utf-8") as f:
+        with open(output_path, encoding="utf-8") as f:
             content = f.read()
             parsed = json.loads(content)
             assert parsed["field1"] == 100

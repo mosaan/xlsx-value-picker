@@ -3,14 +3,12 @@
 """
 
 import json
-import os
 import sys
 import tempfile
 from pathlib import Path
 
 import pytest
 import yaml
-from jsonschema.exceptions import ValidationError
 
 # テスト対象モジュールへのパスを追加
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
@@ -28,9 +26,7 @@ from xlsx_value_picker.config_loader import (
     OutputFormat,
     RegexMatchExpression,
     RequiredExpression,
-    Rule,
     SchemaValidator,
-    detect_expression_type,
 )
 
 

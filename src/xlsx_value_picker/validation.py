@@ -5,13 +5,12 @@
 検証するための機能を提供します。
 """
 
-from typing import Any, Dict, List, Optional, Union
 
 # config_loader ではなく validation_common からクラスをインポート
-from xlsx_value_picker.validation_common import ValidationContext, ValidationResult, IExpression
-
 # 前方参照型を使ってRuleをインポート
 from typing import TYPE_CHECKING
+
+from xlsx_value_picker.validation_common import ValidationContext, ValidationResult
 
 if TYPE_CHECKING:
     from xlsx_value_picker.config_loader import Rule
@@ -24,7 +23,7 @@ class ValidationEngine:
     ルールリストに基づいてバリデーションを実行するエンジンです。
     """
 
-    def __init__(self, rules: List["Rule"]):
+    def __init__(self, rules: list["Rule"]):
         """
         初期化メソッド
 
@@ -33,7 +32,7 @@ class ValidationEngine:
         """
         self.rules = rules
 
-    def validate(self, excel_file: str, field_mapping: Dict[str, str]) -> List[ValidationResult]:
+    def validate(self, excel_file: str, field_mapping: dict[str, str]) -> list[ValidationResult]:
         """
         バリデーションを実行する
 

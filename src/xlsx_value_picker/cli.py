@@ -1,14 +1,13 @@
 import json
 import sys
-from pathlib import Path
-from typing import Optional, Any, List, Dict, Union
+from typing import Any
 
 import click
 
-from .config_loader import ConfigLoader, ConfigValidationError, Rule
+from .config_loader import ConfigLoader, ConfigValidationError
 from .excel_processor import ExcelValueExtractor
 from .output_formatter import OutputFormatter
-from .validation import ValidationEngine, ValidationResult
+from .validation import ValidationEngine
 
 
 @click.command()
@@ -25,9 +24,9 @@ def main(
     excel_file: str,
     config: str,
     ignore_errors: bool,
-    output: Optional[str],
-    log: Optional[str],
-    schema: Optional[str],
+    output: str | None,
+    log: str | None,
+    schema: str | None,
     include_empty_cells: bool,
     validate_only: bool,
 ):
@@ -48,7 +47,6 @@ def main(
             else:
                 # デフォルト値で処理を継続するための最小限の設定を作成
                 click.echo("--ignore-errors オプションが指定されたため、最低限の設定で処理を継続します", err=True)
-                from pydantic import TypeAdapter
                 from .config_loader import ConfigModel, OutputFormat
 
                 config_model = ConfigModel(fields={"dummy": "Sheet1!A1"}, rules=[], output=OutputFormat(format="json"))
@@ -153,7 +151,7 @@ def main(
             if not output:
                 click.echo(result)
 
-            click.echo(f"処理が完了しました。", err=True)
+            click.echo("処理が完了しました。", err=True)
         except Exception as e:
             click.echo(f"出力処理に失敗しました: {e}", err=True)
             if not ignore_errors:
@@ -165,7 +163,7 @@ def main(
             sys.exit(1)
 
 
-def load_config(config_path: str) -> Dict[str, Any]:
+def load_config(config_path: str) -> dict[str, Any]:
     """
     設定ファイルを読み込む (テストとの互換性のために追加)
 

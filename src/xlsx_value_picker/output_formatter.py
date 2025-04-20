@@ -4,12 +4,12 @@
 
 import json
 from pathlib import Path
-from typing import Any, Dict, Optional, Union
+from typing import Any
 
-import yaml
 import jinja2
+import yaml
 
-from .config_loader import ConfigModel, OutputFormat
+from .config_loader import ConfigModel
 
 
 class OutputFormatter:
@@ -27,7 +27,7 @@ class OutputFormatter:
         self.config = config
         self.output_config = config.output
 
-    def format_output(self, data: Dict[str, Any]) -> str:
+    def format_output(self, data: dict[str, Any]) -> str:
         """
         データを設定に基づいて指定された形式に変換する
 
@@ -48,7 +48,7 @@ class OutputFormatter:
         else:
             raise ValueError(f"サポートされていない出力形式です: {output_format}")
 
-    def _format_json(self, data: Dict[str, Any]) -> str:
+    def _format_json(self, data: dict[str, Any]) -> str:
         """
         データをJSON形式に変換する
 
@@ -60,7 +60,7 @@ class OutputFormatter:
         """
         return json.dumps(data, ensure_ascii=False, indent=2)
 
-    def _format_yaml(self, data: Dict[str, Any]) -> str:
+    def _format_yaml(self, data: dict[str, Any]) -> str:
         """
         データをYAML形式に変換する
 
@@ -72,7 +72,7 @@ class OutputFormatter:
         """
         return yaml.dump(data, sort_keys=False, allow_unicode=True)
 
-    def _format_jinja2(self, data: Dict[str, Any]) -> str:
+    def _format_jinja2(self, data: dict[str, Any]) -> str:
         """
         データをJinja2テンプレートを使用して変換する
 
@@ -95,7 +95,7 @@ class OutputFormatter:
             if not template_path.exists():
                 raise FileNotFoundError(f"テンプレートファイルが見つかりません: {template_path}")
 
-            with open(template_path, "r", encoding="utf-8") as f:
+            with open(template_path, encoding="utf-8") as f:
                 template_str = f.read()
         else:
             raise ValueError("Jinja2出力形式の場合、templateまたはtemplate_fileが必要です")
@@ -108,7 +108,7 @@ class OutputFormatter:
 
         return template.render(**data)
 
-    def write_output(self, data: Dict[str, Any], output_path: Optional[Union[str, Path]] = None) -> str:
+    def write_output(self, data: dict[str, Any], output_path: str | Path | None = None) -> str:
         """
         データを設定に基づいてフォーマットし、指定されたパスに書き込む
 
