@@ -85,27 +85,61 @@ def main(
     validation_results: list[ValidationResult] = []
     data: dict[str, Any] = {}
 
+    config_loader: ConfigLoader | None = None
+
     try:
-        # 1. 設定ファイルの読み込み
+        # 1. ConfigLoader の初期化 (スキーマ読み込み)
         try:
             config_loader = ConfigLoader(schema_path=schema)
+        except ConfigLoadError as e:
+            # スキーマ読み込みエラーは ignore_errors の影響を受けずに常にエラー終了させる
+            # (スキーマがないと最低限の動作も保証できないため)
+            click.echo(f"スキーマファイルの読み込みに失敗しました: {e}", err=True)
+            sys.exit(1)
+        except Exception as e: # 予期せぬ初期化エラー
+            click.echo(f"ConfigLoader の初期化中に予期せぬエラーが発生しました: {e}", err=True)
+            sys.exit(1)
+
+        # 2. 設定ファイルの読み込みと検証
+        try:
+            # config_loader は上で初期化成功しているはず
             config_model = config_loader.load_config(config)
-        except (ConfigLoadError, ConfigValidationError, FileNotFoundError) as e:
-            _handle_error(e, ignore_errors, "設定ファイルの読み込みに失敗しました")
-            # ignore_errors=True の場合、最低限の設定で続行
-            if ignore_errors:
-                click.echo("最低限の設定で処理を継続します", err=True)
-                config_model = ConfigModel(fields={"dummy": "Sheet1!A1"}, rules=[], output=OutputFormat(format="json"))
-            else:
-                return # エラーハンドリングで exit しなかった場合はここで終了
+        except ConfigLoadError as e: # 設定ファイルが見つからない、パースできないなど
+             _handle_error(e, ignore_errors, "設定ファイルの読み込みに失敗しました")
+             if ignore_errors:
+                 click.echo("最低限の設定で処理を継続します", err=True)
+                 config_model = ConfigModel(fields={"dummy": "Sheet1!A1"}, rules=[], output=OutputFormat(format="json"))
+             else:
+                 return # exit しなかった場合は終了
+        except ConfigValidationError as e: # スキーマ検証、モデル検証エラー
+             _handle_error(e, ignore_errors, "設定ファイルの検証に失敗しました")
+             if ignore_errors:
+                 click.echo("最低限の設定で処理を継続します", err=True)
+                 config_model = ConfigModel(fields={"dummy": "Sheet1!A1"}, rules=[], output=OutputFormat(format="json"))
+             else:
+                 return # exit しなかった場合は終了
+        except Exception as e: # 予期せぬ読み込み/検証エラー
+             _handle_error(e, ignore_errors, "設定ファイルの処理中に予期せぬエラーが発生しました")
+             if ignore_errors:
+                 click.echo("最低限の設定で処理を継続します", err=True)
+                 config_model = ConfigModel(fields={"dummy": "Sheet1!A1"}, rules=[], output=OutputFormat(format="json"))
+             else:
+                 return # exit しなかった場合は終了
 
-        # config_model が None のままになることは ignore_errors=False の場合のみ
-        if config_model is None:
-             click.echo("設定の読み込みに失敗したため処理を中断します。", err=True)
+
+        # config_model が None のチェック (ignore_errors=True でダミーが設定されるため、基本的には通らないはず)
+        if config_model is None and not ignore_errors:
+             # このパスは load_config でエラーが発生し ignore_errors=False の場合に到達する可能性がある
+             click.echo("設定の読み込み/検証に失敗したため処理を中断します。", err=True)
+             # _handle_error で既に exit(1) しているはずだが念のため
              sys.exit(1)
+        elif config_model is None and ignore_errors:
+             # ignore_errors=True の場合、ダミーが設定されるはずなので、ここに来るのは想定外
+             click.echo("予期せぬエラー: 設定モデルが None ですが ignore_errors=True です。", err=True)
+             sys.exit(1) # 予期せぬ状態なので終了
 
 
-        # 2. バリデーションの実行 (ルールが存在する場合)
+        # 3. バリデーションの実行 (ルールが存在する場合)
         has_validation_rules = len(config_model.rules) > 0
         if has_validation_rules:
             try:
