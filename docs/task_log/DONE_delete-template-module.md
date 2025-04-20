@@ -37,4 +37,15 @@
 ## 7. 承認
 
 ユーザー確認待ち。
+
+## 8. 作業結果
+
+1.  計画書を `WIP_delete-template-module.md` にリネームしました。
+2.  `src/xlsx_value_picker/` ディレクトリ内で `template.py` の依存関係がないことを確認しました。
+3.  `src/xlsx_value_picker/template.py` ファイルを削除しました。
+4.  `test/test_output_formatter.py` が `template.py` に依存していないことを確認しました。
+5.  `uv run pytest` を実行し、`test/test_template.py` が存在しない `template.py` を参照しているためエラーが発生することを確認しました。
+6.  不要なテストファイル `test/test_template.py` を削除しました。
+7.  再度 `uv run pytest` を実行し、すべてのテスト (97件) が成功することを確認しました。
+8.  本計画書に結果を追記し、ファイル名を `DONE_delete-template-module.md` に変更しました。
 ```
