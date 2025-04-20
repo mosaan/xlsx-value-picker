@@ -1,5 +1,5 @@
 """
-CLIインターフェースの統合テスト (ヘルパー関数とフィクスチャ)
+CLIインターフェースのエラーハンドリングテスト
 """
 
 import json
@@ -188,8 +188,8 @@ def create_test_schema(path):
         json.dump(schema, f, indent=2)
 
 
-class TestCLI:
-    """CLIインターフェースのテスト (ヘルパー関数とフィクスチャ)"""
+class TestCLIErrors:
+    """CLIインターフェースのエラーハンドリングテスト"""
 
     @pytest.fixture
     def setup_files(self, tmp_path):
@@ -249,5 +249,46 @@ class TestCLI:
             env=env,
         )
 
-    # テストメソッドは各分割ファイルに移動済み
-    pass
+    def test_invalid_config(self, setup_files):
+        """無効な設定ファイルでの実行テスト (スキーマ違反)"""
+        excel_path = setup_files["excel_path"]
+        invalid_config_path = setup_files["invalid_config_path"]
+        schema_path = setup_files["schema_path"]  # スキーマを指定
+
+        result = self.run_cli_command(
+            [str(excel_path), "--config", str(invalid_config_path), "--schema", str(schema_path)]
+        )
+
+        # 終了コードが1（エラー終了）
+        assert result.returncode == 1
+        # エラーメッセージに「設定ファイルの検証に失敗しました」が含まれる (cli.pyの修正による変更)
+        assert "設定ファイルの検証に失敗しました" in result.stderr
+        # 具体的なスキーマ違反メッセージも確認 (jsonschemaのメッセージに依存)
+        assert "'output' is a required property" in result.stderr  # required 違反
+        # assert "InvalidFormat" in result.stderr # pattern 違反 (jsonschema は最初の違反で止まることがある)
+
+    def test_nonexistent_excel(self, setup_files):
+        """存在しないExcelファイルでの実行テスト"""
+        yaml_config_path = setup_files["yaml_config_path"]
+
+        result = self.run_cli_command(["nonexistent.xlsx", "--config", str(yaml_config_path)])
+
+        # 終了コードが2（Click自体のバリデーションエラー終了）
+        assert result.returncode == 2
+        # エラーメッセージに「File 'nonexistent.xlsx' does not exist」が含まれる
+        assert "File 'nonexistent.xlsx' does not exist" in result.stderr
+
+    def test_nonexistent_config(self, setup_files):
+        """存在しない設定ファイルでの実行テスト"""
+        excel_path = setup_files["excel_path"]
+        schema_path = setup_files["schema_path"]  # スキーマを明示的に指定
+
+        result = self.run_cli_command(
+            [str(excel_path), "--config", "nonexistent_config.yaml", "--schema", str(schema_path)]
+        )
+
+        # 終了コードが1（エラー終了）
+        assert result.returncode == 1
+        # エラーメッセージに「設定ファイルの読み込みに失敗しました」が含まれる
+        assert "設定ファイルの読み込みに失敗しました" in result.stderr
+        assert "nonexistent_config.yaml" in result.stderr  # ファイル名が含まれるか

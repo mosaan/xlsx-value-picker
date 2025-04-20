@@ -1,5 +1,5 @@
 """
-CLIインターフェースの統合テスト (ヘルパー関数とフィクスチャ)
+CLIインターフェースの基本機能テスト
 """
 
 import json
@@ -188,8 +188,8 @@ def create_test_schema(path):
         json.dump(schema, f, indent=2)
 
 
-class TestCLI:
-    """CLIインターフェースのテスト (ヘルパー関数とフィクスチャ)"""
+class TestCLIBasic:
+    """CLIインターフェースの基本機能テスト"""
 
     @pytest.fixture
     def setup_files(self, tmp_path):
@@ -249,5 +249,96 @@ class TestCLI:
             env=env,
         )
 
-    # テストメソッドは各分割ファイルに移動済み
-    pass
+    def test_valid_yaml_config(self, setup_files):
+        """有効なYAML設定ファイルでの実行テスト"""
+        excel_path = setup_files["excel_path"]
+        yaml_config_path = setup_files["yaml_config_path"]
+        schema_path = setup_files["schema_path"]  # スキーマを明示的に指定
+
+        result = self.run_cli_command(
+            [str(excel_path), "--config", str(yaml_config_path), "--schema", str(schema_path)]
+        )
+
+        # 終了コードが0（正常終了）
+        assert result.returncode == 0
+        # 標準出力がJSON形式
+        try:
+            output_data = json.loads(result.stdout)
+            assert output_data["value1"] == 100
+            assert output_data["value2"] == 200
+            assert output_data["text"] == "テスト"
+            assert output_data["sheet2_value"] == "Sheet2値1"
+        except json.JSONDecodeError:
+            pytest.fail("標準出力がJSON形式ではありません")
+
+    def test_valid_json_config(self, setup_files):
+        """有効なJSON設定ファイルでの実行テスト"""
+        excel_path = setup_files["excel_path"]
+        json_config_path = setup_files["json_config_path"]
+        schema_path = setup_files["schema_path"]  # スキーマを明示的に指定
+
+        result = self.run_cli_command(
+            [str(excel_path), "--config", str(json_config_path), "--schema", str(schema_path)]
+        )
+
+        # 終了コードが0（正常終了）
+        assert result.returncode == 0
+        # 標準出力がJSON形式
+        try:
+            output_data = json.loads(result.stdout)
+            assert output_data["value1"] == 100
+            assert output_data["value2"] == 200
+            assert output_data["text"] == "テスト"
+        except json.JSONDecodeError:
+            pytest.fail("標準出力がJSON形式ではありません")
+
+    def test_output_to_file(self, setup_files, tmp_path):
+        """ファイル出力オプションでの実行テスト"""
+        excel_path = setup_files["excel_path"]
+        yaml_config_path = setup_files["yaml_config_path"]
+        output_path = tmp_path / "output.json"
+
+        schema_path = setup_files["schema_path"]  # スキーマを明示的に指定
+        result = self.run_cli_command(
+            [
+                str(excel_path),
+                "--config",
+                str(yaml_config_path),
+                "--schema",
+                str(schema_path),
+                "--output",
+                str(output_path),
+            ]
+        )
+
+        # 終了コードが0（正常終了）
+        assert result.returncode == 0
+        # 出力ファイルが存在する
+        assert output_path.exists()
+
+        # 出力ファイルの内容を確認
+        with open(output_path, encoding="utf-8") as f:
+            output_data = json.load(f)
+            assert output_data["value1"] == 100
+            assert output_data["value2"] == 200
+            assert output_data["text"] == "テスト"
+
+    def test_output_to_stdout(self, setup_files):
+        """標準出力オプションでの実行テスト（明示的に指定なし）"""
+        excel_path = setup_files["excel_path"]
+        yaml_config_path = setup_files["yaml_config_path"]
+        schema_path = setup_files["schema_path"]  # スキーマを明示的に指定
+
+        result = self.run_cli_command(
+            [str(excel_path), "--config", str(yaml_config_path), "--schema", str(schema_path)]
+        )
+
+        # 終了コードが0（正常終了）
+        assert result.returncode == 0
+        # 標準出力にデータが出力される
+        try:
+            output_data = json.loads(result.stdout)
+            assert output_data["value1"] == 100
+            assert output_data["value2"] == 200
+        except json.JSONDecodeError:
+            pytest.fail("標準出力がJSON形式ではありません")

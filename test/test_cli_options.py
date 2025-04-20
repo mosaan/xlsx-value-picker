@@ -1,5 +1,5 @@
 """
-CLIインターフェースの統合テスト (ヘルパー関数とフィクスチャ)
+CLIインターフェースのオプションテスト
 """
 
 import json
@@ -188,8 +188,8 @@ def create_test_schema(path):
         json.dump(schema, f, indent=2)
 
 
-class TestCLI:
-    """CLIインターフェースのテスト (ヘルパー関数とフィクスチャ)"""
+class TestCLIOptions:
+    """CLIインターフェースのオプションテスト"""
 
     @pytest.fixture
     def setup_files(self, tmp_path):
@@ -249,5 +249,94 @@ class TestCLI:
             env=env,
         )
 
-    # テストメソッドは各分割ファイルに移動済み
-    pass
+    def test_custom_schema(self, setup_files):
+        """カスタムスキーマオプションでの実行テスト"""
+        excel_path = setup_files["excel_path"]
+        yaml_config_path = setup_files["yaml_config_path"]
+        schema_path = setup_files["schema_path"]
+
+        result = self.run_cli_command(
+            [str(excel_path), "--config", str(yaml_config_path), "--schema", str(schema_path)]
+        )
+
+        # 終了コードが0（正常終了）
+        assert result.returncode == 0
+        # 標準出力がJSON形式
+        try:
+            output_data = json.loads(result.stdout)
+            assert output_data["value1"] == 100
+            assert output_data["value2"] == 200
+        except json.JSONDecodeError:
+            pytest.fail("標準出力がJSON形式ではありません")
+
+    def test_include_empty_cells(self, setup_files):
+        """空セルを含めるオプションでの実行テスト"""
+        excel_path = setup_files["excel_path"]
+
+        # 空セル含むフィールドの設定ファイル作成
+        tmp_path = Path(excel_path).parent
+        config_path = tmp_path / "empty_cells_config.yaml"
+        config_data = {
+            "fields": {"filled_cell": "Sheet1!A1", "empty_cell": "Sheet1!D4"},
+            "rules": [],
+            "output": {"format": "json"},
+        }
+        with open(config_path, "w", encoding="utf-8") as f:
+            yaml.dump(config_data, f)
+
+        schema_path = setup_files["schema_path"]  # スキーマを明示的に指定
+        # 空セル含めないオプションなし実行
+        result1 = self.run_cli_command([str(excel_path), "--config", str(config_path), "--schema", str(schema_path)])
+
+        # 終了コードが0（正常終了）
+        assert result1.returncode == 0
+        # 空セルは出力に含まれない
+        output_data1 = json.loads(result1.stdout)
+        assert "filled_cell" in output_data1
+        assert "empty_cell" not in output_data1
+
+        # 空セル含むオプション実行
+        result2 = self.run_cli_command(
+            [str(excel_path), "--config", str(config_path), "--schema", str(schema_path), "--include-empty-cells"]
+        )
+
+        # 終了コードが0（正常終了）
+        assert result2.returncode == 0
+        # 空セルも出力に含まれる
+        output_data2 = json.loads(result2.stdout)
+        assert "filled_cell" in output_data2
+        assert "empty_cell" in output_data2
+        assert output_data2["empty_cell"] is None
+
+    def test_ignore_errors(self, setup_files):
+        """エラー無視オプションでの実行テスト (設定ファイル読み込みエラー)"""
+        invalid_config_path = setup_files["invalid_config_path"]
+        excel_path = setup_files["excel_path"]
+        schema_path = setup_files["schema_path"]  # スキーマを指定
+
+        # 無効な設定ファイルでエラー無視なしの場合
+        result1 = self.run_cli_command(
+            [str(excel_path), "--config", str(invalid_config_path), "--schema", str(schema_path)]
+        )
+
+        # 終了コードが1（エラー終了）
+        assert result1.returncode == 1
+        # エラーメッセージに「設定ファイルの検証に失敗しました」が含まれる (cli.pyの修正による変更)
+        assert "設定ファイルの検証に失敗しました" in result1.stderr
+
+        # 無効な設定ファイルでエラー無視ありの場合
+        result2 = self.run_cli_command(
+            [str(excel_path), "--config", str(invalid_config_path), "--schema", str(schema_path), "--ignore-errors"]
+        )
+
+        # エラーメッセージは出るが終了コードは0（正常終了）
+        assert result2.returncode == 0
+        # エラーメッセージに「設定ファイルの検証に失敗しました」が含まれる (cli.pyの修正による変更)
+        assert "設定ファイルの検証に失敗しました" in result2.stderr
+        assert "--ignore-errors オプションが指定されたため" in result2.stderr
+        assert "最低限の設定で処理を継続します" in result2.stderr
+        # 最低限の設定で出力されるか (内容は問わない)
+        try:
+            json.loads(result2.stdout)
+        except json.JSONDecodeError:
+            pytest.fail("エラー無視時に最低限の出力がされませんでした")

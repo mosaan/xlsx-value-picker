@@ -29,3 +29,12 @@
 
 *   各テストファイルが独立して実行可能であることを確認します。
 *   ヘルパー関数やフィクスチャの重複が発生しますが、今回のタスクでは許容し、共通化は別途検討します。
+## 作業結果
+
+- `test/test_cli_integration.py` を以下の4つのファイルに分割しました。
+    - `test/test_cli_basic.py` (基本機能テスト)
+    - `test/test_cli_errors.py` (エラーハンドリングテスト)
+    - `test/test_cli_options.py` (オプションテスト)
+    - `test/test_cli_validation.py` (バリデーションテスト)
+- 元の `test/test_cli_integration.py` には、共通のヘルパー関数とフィクスチャのみを残しました。
+- `pytest test` を実行し、すべてのテスト (124件) が成功することを確認しました。

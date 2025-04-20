@@ -1,5 +1,5 @@
 """
-CLIインターフェースの統合テスト (ヘルパー関数とフィクスチャ)
+CLIインターフェースのバリデーション機能テスト
 """
 
 import json
@@ -188,8 +188,8 @@ def create_test_schema(path):
         json.dump(schema, f, indent=2)
 
 
-class TestCLI:
-    """CLIインターフェースのテスト (ヘルパー関数とフィクスチャ)"""
+class TestCLIValidation:
+    """CLIインターフェースのバリデーション機能テスト"""
 
     @pytest.fixture
     def setup_files(self, tmp_path):
@@ -249,5 +249,169 @@ class TestCLI:
             env=env,
         )
 
-    # テストメソッドは各分割ファイルに移動済み
-    pass
+    def test_validation_success(self, setup_files):
+        """バリデーション成功時のテスト"""
+        excel_path = setup_files["excel_path"]
+        validation_config_path = setup_files["validation_config_path"]
+        schema_path = setup_files["schema_path"]  # スキーマを明示的に指定
+
+        result = self.run_cli_command(
+            [str(excel_path), "--config", str(validation_config_path), "--schema", str(schema_path)]
+        )
+
+        # 終了コードが0（正常終了）
+        assert result.returncode == 0
+        # 標準出力がJSON形式
+        try:
+            output_data = json.loads(result.stdout)
+            assert output_data["email"] == "test@example.com"
+            assert output_data["age"] == 20
+        except json.JSONDecodeError:
+            pytest.fail("標準出力がJSON形式ではありません")
+
+    def test_validation_failure(self, setup_files):
+        """バリデーション失敗時のテスト"""
+        excel_path = setup_files["excel_path"]
+        failing_validation_config_path = setup_files["failing_validation_config_path"]
+        schema_path = setup_files["schema_path"]  # スキーマを明示的に指定
+
+        result = self.run_cli_command(
+            [str(excel_path), "--config", str(failing_validation_config_path), "--schema", str(schema_path)]
+        )
+
+        # 終了コードが1（エラー終了）
+        assert result.returncode == 1
+        # エラーメッセージにバリデーションエラーが含まれる
+        assert "バリデーションエラーが" in result.stderr
+        assert "emailの形式が不正です" in result.stderr
+        assert "ageは18歳以上である必要があります" in result.stderr
+        assert "「その他」を選択した場合はコメントが必須です" in result.stderr
+        # 追加された終了メッセージの確認
+        assert "バリデーションエラーが発生したため、処理を中止します" in result.stderr
+        assert "エラーを無視して処理を継続するには --ignore-errors オプションを指定してください" in result.stderr
+
+    def test_validation_only_mode_success(self, setup_files):
+        """バリデーションのみモード成功時のテスト"""
+        excel_path = setup_files["excel_path"]
+        validation_config_path = setup_files["validation_config_path"]
+        schema_path = setup_files["schema_path"]  # スキーマを明示的に指定
+
+        result = self.run_cli_command(
+            [str(excel_path), "--config", str(validation_config_path), "--schema", str(schema_path), "--validate-only"]
+        )
+
+        # 終了コードが0（正常終了）
+        assert result.returncode == 0
+        # 標準出力は空（バリデーションのみモードでは出力なし）
+        assert not result.stdout.strip()
+        # 標準エラー出力にバリデーション成功メッセージが含まれる
+        assert "バリデーションに成功しました" in result.stderr
+
+    def test_validation_only_mode_failure(self, setup_files):
+        """バリデーションのみモード失敗時のテスト"""
+        excel_path = setup_files["excel_path"]
+        failing_validation_config_path = setup_files["failing_validation_config_path"]
+        schema_path = setup_files["schema_path"]  # スキーマを明示的に指定
+
+        result = self.run_cli_command(
+            [
+                str(excel_path),
+                "--config",
+                str(failing_validation_config_path),
+                "--schema",
+                str(schema_path),
+                "--validate-only",
+            ]
+        )
+
+        # 終了コードが1（エラー終了）
+        assert result.returncode == 1
+        # 標準出力は空（バリデーションのみモードでは出力なし）
+        assert not result.stdout.strip()
+        # 標準エラー出力にバリデーションエラーが含まれる
+        assert "バリデーションエラーが" in result.stderr
+        # 追加された終了メッセージの確認
+        assert "バリデーションのみモードで実行しました (エラーあり)" in result.stderr
+
+    def test_validation_log_output(self, setup_files):
+        """バリデーションログ出力のテスト"""
+        excel_path = setup_files["excel_path"]
+        failing_validation_config_path = setup_files["failing_validation_config_path"]
+        log_path = setup_files["log_path"]
+        schema_path = setup_files["schema_path"]  # スキーマを明示的に指定
+
+        result = self.run_cli_command(
+            [
+                str(excel_path),
+                "--config",
+                str(failing_validation_config_path),
+                "--schema",
+                str(schema_path),
+                "--log",
+                str(log_path),
+            ]
+        )
+
+        # 終了コードが1（エラー終了）
+        assert result.returncode == 1
+        # ログファイルが存在する
+        assert Path(log_path).exists()
+
+        # ログファイルの内容を検証
+        with open(log_path, encoding="utf-8") as f:
+            log_data = json.load(f)
+            assert log_data["is_valid"] is False
+            assert "validation_results" in log_data
+            assert len(log_data["validation_results"]) > 0
+            assert log_data["error_count"] > 0
+
+            # 少なくとも1つのバリデーション結果に適切な情報が含まれているか
+            result_log = log_data["validation_results"][0]  # 変数名を変更 (result は subprocess の結果と衝突)
+            assert "is_valid" in result_log
+            assert "error_message" in result_log
+            assert "error_fields" in result_log
+            assert "error_locations" in result_log
+        # 追加された終了メッセージの確認
+        assert "バリデーションエラーが発生したため、処理を中止します" in result.stderr
+        assert "エラーを無視して処理を継続するには --ignore-errors オプションを指定してください" in result.stderr
+
+    def test_ignore_errors_with_validation(self, setup_files):
+        """バリデーション失敗時のエラー無視オプションテスト"""
+        excel_path = setup_files["excel_path"]
+        failing_validation_config_path = setup_files["failing_validation_config_path"]
+        schema_path = setup_files["schema_path"]  # スキーマを明示的に指定
+
+        # エラー無視なしの場合
+        result1 = self.run_cli_command(
+            [str(excel_path), "--config", str(failing_validation_config_path), "--schema", str(schema_path)]
+        )
+
+        # 終了コードが1（エラー終了）
+        assert result1.returncode == 1
+
+        # エラー無視ありの場合
+        result2 = self.run_cli_command(
+            [
+                str(excel_path),
+                "--config",
+                str(failing_validation_config_path),
+                "--schema",
+                str(schema_path),
+                "--ignore-errors",
+            ]
+        )
+
+        # 終了コードが0（正常終了）
+        assert result2.returncode == 0
+        # バリデーションエラーメッセージは表示される
+        assert "バリデーションエラーが" in result2.stderr
+        # エラー無視メッセージが表示される
+        assert (
+            "--ignore-errors オプションが指定されたため、バリデーションエラーを無視して処理を継続します"
+            in result2.stderr
+        )  # メッセージ変更
+        # 出力データも取得できる
+        try:
+            json.loads(result2.stdout)
+        except json.JSONDecodeError:
+            pytest.fail("標準出力がJSON形式ではありません")
