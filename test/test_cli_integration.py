@@ -76,12 +76,13 @@ def create_valid_config_json(path, excel_path):
 
 
 def create_invalid_config_yaml(path):
-    """無効なYAML設定ファイルを作成する"""
+    """無効なYAML設定ファイルを作成する (スキーマ違反)"""
     config_data = {
         "fields": {
-            "value1": "InvalidFormat"  # 不正なセル参照形式
+            "value1": "InvalidFormat"  # スキーマ違反 (pattern)
         },
         "rules": [],
+        # output が必須なのにない (required違反)
     }
     with open(path, "w", encoding="utf-8") as f:
         yaml.dump(config_data, f)
@@ -175,8 +176,15 @@ def create_test_schema(path):
                     "required": ["name", "expression", "error_message"],
                 },
             },
+             "output": { # output を必須にする
+                 "type": "object",
+                 "properties": {
+                     "format": {"type": "string", "enum": ["json", "yaml", "csv"]}
+                 },
+                 "required": ["format"]
+             }
         },
-        "required": ["fields", "rules"],
+        "required": ["fields", "rules", "output"], # output を必須にする
     }
     with open(path, "w", encoding="utf-8") as f:
         json.dump(schema, f, indent=2)
@@ -281,16 +289,20 @@ class TestCLI:
             pytest.fail("標準出力がJSON形式ではありません")
 
     def test_invalid_config(self, setup_files):
-        """無効な設定ファイルでの実行テスト"""
+        """無効な設定ファイルでの実行テスト (スキーマ違反)"""
         excel_path = setup_files["excel_path"]
         invalid_config_path = setup_files["invalid_config_path"]
+        schema_path = setup_files["schema_path"] # スキーマを指定
 
-        result = self.run_cli_command([str(excel_path), "--config", str(invalid_config_path)])
+        result = self.run_cli_command([str(excel_path), "--config", str(invalid_config_path), "--schema", str(schema_path)])
 
         # 終了コードが1（エラー終了）
         assert result.returncode == 1
-        # エラーメッセージに「設定ファイルの検証に失敗」が含まれる
-        assert "設定ファイルの検証に失敗" in result.stderr
+        # エラーメッセージに「設定ファイルの読み込みに失敗しました」が含まれる
+        assert "設定ファイルの読み込みに失敗しました" in result.stderr
+        # 具体的なスキーマ違反メッセージも確認 (jsonschemaのメッセージに依存)
+        assert "'output' is a required property" in result.stderr # required 違反
+        # assert "InvalidFormat" in result.stderr # pattern 違反 (jsonschema は最初の違反で止まることがある)
 
     def test_nonexistent_excel(self, setup_files):
         """存在しないExcelファイルでの実行テスト"""
@@ -311,8 +323,9 @@ class TestCLI:
 
         # 終了コードが1（エラー終了）
         assert result.returncode == 1
-        # エラーメッセージに「設定ファイルの読み込みに失敗」が含まれる
-        assert "設定ファイルの読み込みに失敗" in result.stderr
+        # エラーメッセージに「設定ファイルの読み込みに失敗しました」が含まれる
+        assert "設定ファイルの読み込みに失敗しました" in result.stderr
+        assert "nonexistent_config.yaml" in result.stderr # ファイル名が含まれるか
 
     def test_output_to_file(self, setup_files, tmp_path):
         """ファイル出力オプションでの実行テスト"""
@@ -410,24 +423,32 @@ class TestCLI:
         assert output_data2["empty_cell"] is None
 
     def test_ignore_errors(self, setup_files):
-        """エラー無視オプションでの実行テスト"""
+        """エラー無視オプションでの実行テスト (設定ファイル読み込みエラー)"""
         invalid_config_path = setup_files["invalid_config_path"]
         excel_path = setup_files["excel_path"]
+        schema_path = setup_files["schema_path"] # スキーマを指定
 
         # 無効な設定ファイルでエラー無視なしの場合
-        result1 = self.run_cli_command([str(excel_path), "--config", str(invalid_config_path)])
+        result1 = self.run_cli_command([str(excel_path), "--config", str(invalid_config_path), "--schema", str(schema_path)])
 
         # 終了コードが1（エラー終了）
         assert result1.returncode == 1
-        assert "設定ファイルの検証に失敗" in result1.stderr
+        assert "設定ファイルの読み込みに失敗しました" in result1.stderr
 
         # 無効な設定ファイルでエラー無視ありの場合
-        result2 = self.run_cli_command([str(excel_path), "--config", str(invalid_config_path), "--ignore-errors"])
+        result2 = self.run_cli_command([str(excel_path), "--config", str(invalid_config_path), "--schema", str(schema_path), "--ignore-errors"])
 
         # エラーメッセージは出るが終了コードは0（正常終了）
         assert result2.returncode == 0
-        assert "設定ファイルの読み込みに失敗" in result2.stderr
+        assert "設定ファイルの読み込みに失敗しました" in result2.stderr
         assert "--ignore-errors オプションが指定されたため" in result2.stderr
+        assert "最低限の設定で処理を継続します" in result2.stderr
+        # 最低限の設定で出力されるか (内容は問わない)
+        try:
+            json.loads(result2.stdout)
+        except json.JSONDecodeError:
+             pytest.fail("エラー無視時に最低限の出力がされませんでした")
+
 
     def test_validation_success(self, setup_files):
         """バリデーション成功時のテスト"""
@@ -460,6 +481,9 @@ class TestCLI:
         assert "emailの形式が不正です" in result.stderr
         assert "ageは18歳以上である必要があります" in result.stderr
         assert "「その他」を選択した場合はコメントが必須です" in result.stderr
+        # 追加された終了メッセージの確認
+        assert "バリデーションエラーが発生したため、処理を中止します" in result.stderr
+        assert "エラーを無視して処理を継続するには --ignore-errors オプションを指定してください" in result.stderr
 
     def test_validation_only_mode_success(self, setup_files):
         """バリデーションのみモード成功時のテスト"""
@@ -490,6 +514,8 @@ class TestCLI:
         assert not result.stdout.strip()
         # 標準エラー出力にバリデーションエラーが含まれる
         assert "バリデーションエラーが" in result.stderr
+        # 追加された終了メッセージの確認
+        assert "バリデーションのみモードで実行しました (エラーあり)" in result.stderr
 
     def test_validation_log_output(self, setup_files):
         """バリデーションログ出力のテスト"""
@@ -515,11 +541,14 @@ class TestCLI:
             assert log_data["error_count"] > 0
 
             # 少なくとも1つのバリデーション結果に適切な情報が含まれているか
-            result = log_data["validation_results"][0]
-            assert "is_valid" in result
-            assert "error_message" in result
-            assert "error_fields" in result
-            assert "error_locations" in result
+            result_log = log_data["validation_results"][0] # 変数名を変更 (result は subprocess の結果と衝突)
+            assert "is_valid" in result_log
+            assert "error_message" in result_log
+            assert "error_fields" in result_log
+            assert "error_locations" in result_log
+        # 追加された終了メッセージの確認
+        assert "バリデーションエラーが発生したため、処理を中止します" in result.stderr
+        assert "エラーを無視して処理を継続するには --ignore-errors オプションを指定してください" in result.stderr
 
     def test_ignore_errors_with_validation(self, setup_files):
         """バリデーション失敗時のエラー無視オプションテスト"""
@@ -542,7 +571,7 @@ class TestCLI:
         # バリデーションエラーメッセージは表示される
         assert "バリデーションエラーが" in result2.stderr
         # エラー無視メッセージが表示される
-        assert "--ignore-errors オプションが指定されたため" in result2.stderr
+        assert "--ignore-errors オプションが指定されたため、バリデーションエラーを無視して処理を継続します" in result2.stderr # メッセージ変更
         # 出力データも取得できる
         try:
             json.loads(result2.stdout)

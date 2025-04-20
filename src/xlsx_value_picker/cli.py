@@ -4,10 +4,56 @@ from typing import Any
 
 import click
 
-from .config_loader import ConfigLoader, ConfigValidationError
+from .config_loader import ConfigLoader, ConfigModel, OutputFormat
 from .excel_processor import ExcelValueExtractor
+from .exceptions import (
+    ConfigError,
+    ConfigLoadError,
+    ConfigValidationError,
+    ExcelProcessingError,
+    OutputError,
+    ValidationError,
+    XlsxValuePickerError,
+)
 from .output_formatter import OutputFormatter
-from .validation import ValidationEngine
+from .validation import ValidationEngine, ValidationResult
+
+
+def _handle_error(e: Exception, ignore_errors: bool, message_prefix: str = "エラーが発生しました"):
+    """共通のエラーハンドリング処理"""
+    click.echo(f"{message_prefix}: {e}", err=True)
+    if not ignore_errors:
+        sys.exit(1)
+    else:
+        click.echo("--ignore-errors オプションが指定されたため、処理を継続します", err=True)
+
+
+def _write_validation_log(log_path: str, validation_results: list[ValidationResult]):
+    """バリデーション結果をログファイルに書き込む"""
+    try:
+        with open(log_path, "w", encoding="utf-8") as f:
+            json.dump(
+                {
+                    "validation_results": [
+                        {
+                            "is_valid": result.is_valid,
+                            "error_message": result.error_message,
+                            "error_fields": result.error_fields,
+                            "error_locations": result.error_locations,
+                            "severity": result.severity,
+                        }
+                        for result in validation_results
+                    ],
+                    "is_valid": False,
+                    "error_count": len(validation_results),
+                },
+                f,
+                ensure_ascii=False,
+                indent=2,
+            )
+        click.echo(f"バリデーション結果を {log_path} に保存しました", err=True)
+    except Exception as e:
+        click.echo(f"ログ出力に失敗しました: {e}", err=True)
 
 
 @click.command()
@@ -35,132 +81,113 @@ def main(
 
     EXCEL_FILE: 処理対象のExcelファイルパス
     """
+    config_model: ConfigModel | None = None
+    validation_results: list[ValidationResult] = []
+    data: dict[str, Any] = {}
+
     try:
-        # 設定ファイルの読み込み
-        config_loader = ConfigLoader(schema_path=schema)
+        # 1. 設定ファイルの読み込み
         try:
+            config_loader = ConfigLoader(schema_path=schema)
             config_model = config_loader.load_config(config)
-        except (ConfigValidationError, FileNotFoundError) as e:
-            click.echo(f"設定ファイルの読み込みに失敗しました: {e}", err=True)
-            if not ignore_errors:  # ignore-errorsオプションを確認
-                sys.exit(1)
-            else:
-                # デフォルト値で処理を継続するための最小限の設定を作成
-                click.echo("--ignore-errors オプションが指定されたため、最低限の設定で処理を継続します", err=True)
-                from .config_loader import ConfigModel, OutputFormat
-
+        except (ConfigLoadError, ConfigValidationError, FileNotFoundError) as e:
+            _handle_error(e, ignore_errors, "設定ファイルの読み込みに失敗しました")
+            # ignore_errors=True の場合、最低限の設定で続行
+            if ignore_errors:
+                click.echo("最低限の設定で処理を継続します", err=True)
                 config_model = ConfigModel(fields={"dummy": "Sheet1!A1"}, rules=[], output=OutputFormat(format="json"))
+            else:
+                return # エラーハンドリングで exit しなかった場合はここで終了
 
-        # バリデーションエンジンの準備（ルールが定義されている場合）
+        # config_model が None のままになることは ignore_errors=False の場合のみ
+        if config_model is None:
+             click.echo("設定の読み込みに失敗したため処理を中断します。", err=True)
+             sys.exit(1)
+
+
+        # 2. バリデーションの実行 (ルールが存在する場合)
         has_validation_rules = len(config_model.rules) > 0
-        validation_results = []
-
         if has_validation_rules:
-            # バリデーションエンジンの初期化と検証実行
-            validation_engine = ValidationEngine(config_model.rules)
             try:
+                validation_engine = ValidationEngine(config_model.rules)
                 validation_results = validation_engine.validate(excel_file, config_model.fields)
-            except Exception as e:
-                click.echo(f"バリデーション実行中にエラーが発生しました: {e}", err=True)
-                if not ignore_errors:
-                    sys.exit(1)
-                else:
-                    click.echo("--ignore-errors オプションが指定されたため、処理を継続します", err=True)
+            except Exception as e: # ValidationEngine 内のエラーは汎用 Exception でキャッチ
+                 _handle_error(e, ignore_errors, "バリデーション実行中にエラーが発生しました")
+                 # ignore_errors=True の場合、validation_results は空のまま続行
 
-            # バリデーションエラーがある場合の処理
+            # バリデーションエラー処理
             if validation_results:
                 click.echo(f"バリデーションエラーが {len(validation_results)} 件見つかりました:", err=True)
                 for idx, result in enumerate(validation_results, 1):
                     locations = ", ".join(result.error_locations) if result.error_locations else "不明"
                     click.echo(f"  {idx}. {result.error_message} (位置: {locations})", err=True)
 
-                # エラーログの出力
                 if log:
-                    try:
-                        with open(log, "w", encoding="utf-8") as f:
-                            json.dump(
-                                {
-                                    "validation_results": [
-                                        {
-                                            "is_valid": result.is_valid,
-                                            "error_message": result.error_message,
-                                            "error_fields": result.error_fields,
-                                            "error_locations": result.error_locations,
-                                            "severity": result.severity,
-                                        }
-                                        for result in validation_results
-                                    ],
-                                    "is_valid": False,
-                                    "error_count": len(validation_results),
-                                },
-                                f,
-                                ensure_ascii=False,
-                                indent=2,
-                            )
-                        click.echo(f"バリデーション結果を {log} に保存しました", err=True)
-                    except Exception as e:
-                        click.echo(f"ログ出力に失敗しました: {e}", err=True)
+                    _write_validation_log(log, validation_results)
 
-                # バリデーションのみモードの場合はここで終了
                 if validate_only:
+                    click.echo("バリデーションのみモードで実行しました (エラーあり)", err=True)
                     if not ignore_errors:
                         sys.exit(1)
-                    click.echo("バリデーションのみモードで実行しました", err=True)
-                    return
+                    return # ignore_errors=True ならここで終了
 
-                # 通常モードでバリデーションエラーがあり、ignore-errors指定がない場合は終了
-                elif not ignore_errors:
+                # 通常モードでエラーがあり、ignore_errors=False なら終了
+                if not ignore_errors:
                     click.echo("バリデーションエラーが発生したため、処理を中止します", err=True)
-                    click.echo(
-                        "エラーを無視して処理を継続するには --ignore-errors オプションを指定してください", err=True
-                    )
+                    click.echo("エラーを無視して処理を継続するには --ignore-errors オプションを指定してください", err=True)
                     sys.exit(1)
+                else:
+                     click.echo("--ignore-errors オプションが指定されたため、バリデーションエラーを無視して処理を継続します", err=True)
 
-                click.echo(
-                    "--ignore-errors オプションが指定されたため、バリデーションエラーを無視して処理を継続します",
-                    err=True,
-                )
-
-        # バリデーションのみのモードで、かつバリデーションが成功した場合
+        # バリデーションのみモードで成功した場合
         if validate_only:
-            click.echo("バリデーションに成功しました", err=True)
-            return
+             if not validation_results: # エラーがなかった場合
+                 click.echo("バリデーションに成功しました", err=True)
+             # エラーがあっても ignore_errors=True ならここまで来るので return する
+             return
 
-        # Excelファイルからの値取得
+
+        # 3. Excelファイルからの値取得
         try:
-            extractor = ExcelValueExtractor(excel_file)
-            data = extractor.extract_values(config_model, include_empty_cells=include_empty_cells)
-        except Exception as e:
-            click.echo(f"Excelファイルからの値取得に失敗しました: {e}", err=True)
-            if not ignore_errors:  # ignore-errorsオプションを確認
-                sys.exit(1)
+            with ExcelValueExtractor(excel_file) as extractor:
+                data = extractor.extract_values(config_model, include_empty_cells=include_empty_cells)
+        except ExcelProcessingError as e:
+            _handle_error(e, ignore_errors, "Excelファイルからの値取得に失敗しました")
+            if ignore_errors:
+                click.echo("空のデータで処理を継続します", err=True)
+                data = {} # 空のデータで続行
             else:
-                # 空のデータで処理を継続
-                click.echo("--ignore-errors オプションが指定されたため、空のデータで処理を継続します", err=True)
-                data = {}
-        finally:
-            if "extractor" in locals():
-                extractor.close()
+                return # エラーハンドリングで exit しなかった場合はここで終了
+        except Exception as e: # 予期せぬエラー
+             _handle_error(e, ignore_errors, "Excelファイル処理中に予期せぬエラーが発生しました")
+             if ignore_errors:
+                 click.echo("空のデータで処理を継続します", err=True)
+                 data = {}
+             else:
+                 return
 
-        # 出力処理
+
+        # 4. 出力処理
         try:
             formatter = OutputFormatter(config_model)
             result = formatter.write_output(data, output)
-
-            # 出力先が指定されていない場合は標準出力に表示
             if not output:
                 click.echo(result)
-
             click.echo("処理が完了しました。", err=True)
-        except Exception as e:
-            click.echo(f"出力処理に失敗しました: {e}", err=True)
-            if not ignore_errors:
-                sys.exit(1)
+        except OutputError as e:
+            _handle_error(e, ignore_errors, "出力処理に失敗しました")
+        except Exception as e: # 予期せぬエラー
+            _handle_error(e, ignore_errors, "出力処理中に予期せぬエラーが発生しました")
 
+
+    except XlsxValuePickerError as e:
+        # 予期されるアプリケーションエラーの最終キャッチ
+        _handle_error(e, ignore_errors)
     except Exception as e:
-        click.echo(f"エラーが発生しました: {e}", err=True)
-        if not ignore_errors:
-            sys.exit(1)
+        # 予期しないエラーの最終キャッチ
+        click.echo(f"予期しないエラーが発生しました: {e}", err=True)
+        # ignore_errors に関わらず、予期しないエラーは終了させるのが安全か検討
+        sys.exit(1)
 
 
 def load_config(config_path: str) -> dict[str, Any]:
@@ -173,8 +200,14 @@ def load_config(config_path: str) -> dict[str, Any]:
     Returns:
         設定データ
     """
+    # この関数はテスト用なので、リファクタリング対象外とする
+    # 必要であれば別途修正
     config_loader = ConfigLoader()
-    return config_loader.load_config(config_path).model_dump()
+    try:
+        return config_loader.load_config(config_path).model_dump()
+    except (ConfigLoadError, ConfigValidationError, FileNotFoundError) as e:
+        # テスト用にエラーを再送出するか、None を返すかなどを検討
+        raise RuntimeError(f"テスト用の設定読み込みに失敗: {e}") from e
 
 
 if __name__ == "__main__":

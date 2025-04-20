@@ -4,22 +4,20 @@ JSONスキーマに基づく設定データ読み込み機能
 
 import json
 import os
+from pathlib import Path # pathlib をインポート
 from typing import Any, ClassVar
 
 import jsonschema
 import yaml
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator, ValidationError as PydanticValidationError
 
-# validation_expressions から ExpressionType をインポート
+# カスタム例外をインポート
+from .exceptions import ConfigLoadError, ConfigValidationError, XlsxValuePickerError
 from .validation_common import ValidationContext, ValidationResult
 from .validation_expressions import ExpressionType, convert_expression
 
 
-class ConfigValidationError(Exception):
-    """設定ファイルのバリデーションエラー"""
-
-    pass
-
+# ConfigValidationError は exceptions.py に移動済みのため削除
 
 class ConfigParser:
     @staticmethod
@@ -34,19 +32,25 @@ class ConfigParser:
             dict: 設定データ
 
         Raises:
-            ValueError: サポートされていないファイル形式の場合
-            FileNotFoundError: ファイルが存在しない場合
+            ConfigLoadError: ファイルが存在しない、またはサポートされていない形式の場合
         """
         if not os.path.exists(file_path):
-            raise FileNotFoundError(f"設定ファイルが見つかりません: {file_path}")
+            # FileNotFoundError の代わりに ConfigLoadError を送出
+            raise ConfigLoadError(f"設定ファイルが見つかりません: {file_path}")
 
-        with open(file_path, encoding="utf-8") as f:
-            if file_path.endswith(".yaml") or file_path.endswith(".yml"):
-                return yaml.safe_load(f)
-            elif file_path.endswith(".json"):
-                return json.load(f)
-            else:
-                raise ValueError(f"サポートされていないファイル形式です: {file_path}")
+        try:
+            with open(file_path, encoding="utf-8") as f:
+                if file_path.endswith(".yaml") or file_path.endswith(".yml"):
+                    return yaml.safe_load(f)
+                elif file_path.endswith(".json"):
+                    return json.load(f)
+                else:
+                    # ValueError の代わりに ConfigLoadError を送出
+                    raise ConfigLoadError(f"サポートされていないファイル形式です: {file_path}")
+        except (yaml.YAMLError, json.JSONDecodeError) as e:
+             raise ConfigLoadError(f"設定ファイルのパースに失敗しました: {file_path} - {e}")
+        except Exception as e: # その他の予期せぬ読み込みエラー
+             raise ConfigLoadError(f"設定ファイルの読み込み中に予期せぬエラーが発生しました: {file_path} - {e}")
 
 
 class SchemaValidator:
@@ -58,12 +62,22 @@ class SchemaValidator:
 
         Args:
             schema_path: JSONスキーマファイルのパス
+
+        Raises:
+            ConfigLoadError: スキーマファイルが見つからない、またはJSONとして不正な場合
         """
         if not os.path.exists(schema_path):
-            raise FileNotFoundError(f"スキーマファイルが見つかりません: {schema_path}")
+             # FileNotFoundError の代わりに ConfigLoadError を送出
+            raise ConfigLoadError(f"スキーマファイルが見つかりません: {schema_path}")
 
-        with open(schema_path, encoding="utf-8") as f:
-            self.schema = json.load(f)
+        try:
+            with open(schema_path, encoding="utf-8") as f:
+                self.schema = json.load(f)
+        except json.JSONDecodeError as e:
+            raise ConfigLoadError(f"スキーマファイルのJSON形式が不正です: {schema_path} - {e}")
+        except Exception as e:
+            raise ConfigLoadError(f"スキーマファイルの読み込み中に予期せぬエラーが発生しました: {schema_path} - {e}")
+
 
     def validate(self, config_data: dict) -> None:
         """
@@ -79,11 +93,13 @@ class SchemaValidator:
             jsonschema.validate(instance=config_data, schema=self.schema)
         except jsonschema.exceptions.ValidationError as e:
             path = ".".join(str(p) for p in e.path) if e.path else "root"
-            raise ConfigValidationError(f"設定ファイルの検証に失敗しました: {path} - {e.message}")
+            # ConfigValidationError を使用
+            raise ConfigValidationError(f"設定ファイルのスキーマ検証に失敗しました: {path} - {e.message}")
+        except Exception as e: # jsonschema の予期せぬエラー
+            raise ConfigValidationError(f"スキーマ検証中に予期せぬエラーが発生しました: {e}")
 
 
-# バリデーション式関連のコードは validation_expressions.py に移動
-
+# バリデーション式関連のコードは validation_expressions.py に移動済み
 
 class Rule(BaseModel):
     """バリデーションルール"""
@@ -141,8 +157,10 @@ class OutputFormat(BaseModel):
         if self.format == "jinja2" and self.template_file and self.template:
             raise ValueError("template_fileとtemplateを同時に指定することはできません")
 
-        if self.format not in ["json", "yaml", "jinja2"]:
+        if self.format not in ["json", "yaml", "jinja2", "csv"]: # csv を追加 (仮)
+             # TODO: csv サポートを正式に追加する際に修正
             raise ValueError(f"サポートされていない出力形式です: {self.format}")
+            # pass # 一旦許容
 
         return self
 
@@ -173,8 +191,10 @@ class ConfigModel(BaseModel):
 class ConfigLoader:
     """設定ファイルローダー"""
 
-    DEFAULT_SCHEMA_PATH: ClassVar[str] = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "docs", "spec", "rule-schema.json"
+    # 修正: デフォルトスキーマパスの計算方法を変更
+    _BASE_DIR = Path(__file__).resolve().parent.parent # src ディレクトリを基準とする
+    DEFAULT_SCHEMA_PATH: ClassVar[str] = str(
+        _BASE_DIR.parent / "docs" / "spec" / "rule-schema.json" # プロジェクトルートからの相対パス
     )
 
     def __init__(self, schema_path: str = None):
@@ -183,9 +203,20 @@ class ConfigLoader:
 
         Args:
             schema_path: JSONスキーマファイルのパス（None の場合はデフォルトパスを使用）
+
+        Raises:
+            ConfigLoadError: スキーマファイルの読み込みに失敗した場合
         """
         self.schema_path = schema_path or self.DEFAULT_SCHEMA_PATH
-        self.validator = SchemaValidator(self.schema_path)
+        # print(f"DEBUG: Using schema path: {self.schema_path}") # デバッグ用
+        try:
+            self.validator = SchemaValidator(self.schema_path)
+        except ConfigLoadError as e: # SchemaValidator からの ConfigLoadError をキャッチ
+            # __init__ で発生したエラーはそのまま送出
+            raise e
+        except Exception as e: # 予期せぬエラー
+             raise ConfigLoadError(f"スキーマバリデーターの初期化中にエラーが発生しました: {e}")
+
 
     def load_config(self, config_path: str) -> ConfigModel:
         """
@@ -198,16 +229,31 @@ class ConfigLoader:
             ConfigModel: 設定モデルオブジェクト
 
         Raises:
-            ConfigValidationError: 設定ファイルの検証に失敗した場合
+            ConfigLoadError: 設定ファイルの読み込みやパースに失敗した場合
+            ConfigValidationError: 設定ファイルのスキーマ検証やモデル検証に失敗した場合
         """
-        # 設定ファイルのパース
-        config_data = ConfigParser.parse_file(config_path)
-
-        # JSONスキーマによる検証
-        self.validator.validate(config_data)
-
         try:
-            # モデルオブジェクトの生成
-            return ConfigModel.model_validate(config_data)
+            # 設定ファイルのパース (ConfigLoadError が発生する可能性)
+            config_data = ConfigParser.parse_file(config_path)
+
+            # JSONスキーマによる検証 (ConfigValidationError が発生する可能性)
+            self.validator.validate(config_data)
+
+            # モデルオブジェクトの生成 (PydanticValidationError が発生する可能性)
+            model = ConfigModel.model_validate(config_data)
+            return model
+
+        except ConfigLoadError as e:
+            # パース時のエラーはそのまま ConfigLoadError として送出
+            raise e
+        except ConfigValidationError as e:
+             # スキーマ検証時のエラーはそのまま ConfigValidationError として送出
+            raise e
+        except PydanticValidationError as e:
+            # Pydantic のバリデーションエラーを ConfigValidationError にラップして送出
+            # エラーメッセージを整形して分かりやすくする
+            error_details = "; ".join([f"{err['loc']}: {err['msg']}" for err in e.errors()])
+            raise ConfigValidationError(f"設定ファイルのモデル検証に失敗しました: {error_details}") from e
         except Exception as e:
-            raise ConfigValidationError(f"設定ファイルの検証に失敗しました: {e}")
+            # その他の予期せぬエラー
+            raise XlsxValuePickerError(f"設定ファイルの処理中に予期せぬエラーが発生しました: {e}") from e
