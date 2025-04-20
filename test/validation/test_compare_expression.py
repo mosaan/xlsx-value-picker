@@ -1,9 +1,11 @@
 """
 CompareExpressionのテスト（pytestスタイル）
 """
+
 import pytest
 from xlsx_value_picker.validation_common import ValidationContext
 from xlsx_value_picker.config_loader import CompareExpression
+
 
 class TestCompareExpression:
     @pytest.fixture(autouse=True)

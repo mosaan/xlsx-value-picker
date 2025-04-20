@@ -1,8 +1,10 @@
 """
 ValidationResultのテスト（pytestスタイル）
 """
+
 import pytest
 from xlsx_value_picker.validation_common import ValidationResult
+
 
 class TestValidationResult:
     def test_post_init_with_valid_result(self):

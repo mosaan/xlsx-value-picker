@@ -1,9 +1,11 @@
 """
 AllOfExpressionのpytestテスト
 """
+
 import pytest
 from xlsx_value_picker.validation_common import ValidationContext
 from xlsx_value_picker.config_loader import AllOfExpression, CompareExpression, RequiredExpression, RegexMatchExpression
+
 
 @pytest.fixture
 def context():
@@ -11,6 +13,7 @@ def context():
         cell_values={"age": 25, "name": "テスト", "email": "test@example.com"},
         field_locations={"age": "Sheet1!A1", "name": "Sheet1!B1", "email": "Sheet1!C1"},
     )
+
 
 def test_all_of_valid(context):
     expr = AllOfExpression(
@@ -23,6 +26,7 @@ def test_all_of_valid(context):
     result = expr.validate(context, "すべての条件を満たしていません")
     assert result.is_valid
 
+
 def test_all_of_invalid(context):
     expr = AllOfExpression(
         all_of=[
@@ -34,6 +38,7 @@ def test_all_of_invalid(context):
     assert not result.is_valid
     assert result.error_message == "すべての条件を満たしていません"
     assert result.error_fields == ["age"]
+
 
 def test_all_of_multiple_invalid(context):
     expr = AllOfExpression(

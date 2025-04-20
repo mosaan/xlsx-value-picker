@@ -1,12 +1,14 @@
 """
 ValidationEngineのpytestテスト
 """
+
 import pytest
 from unittest.mock import patch
 from xlsx_value_picker.validation import ValidationEngine
 from xlsx_value_picker.config_loader import Rule, CompareExpression, RegexMatchExpression
 
-@patch('xlsx_value_picker.excel_processor.get_excel_values')
+
+@patch("xlsx_value_picker.excel_processor.get_excel_values")
 def test_validate(mock_get_excel_values):
     mock_get_excel_values.return_value = {"age": 25, "email": "invalid-email"}
 

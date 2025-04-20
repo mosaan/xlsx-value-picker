@@ -1,9 +1,11 @@
 """
 Ruleのpytestテスト
 """
+
 import pytest
 from xlsx_value_picker.validation_common import ValidationContext
 from xlsx_value_picker.config_loader import Rule, CompareExpression
+
 
 @pytest.fixture
 def context():
@@ -11,6 +13,7 @@ def context():
         cell_values={"age": 25, "email": "test@example.com"},
         field_locations={"age": "Sheet1!A1", "email": "Sheet1!B1"},
     )
+
 
 def test_rule_valid(context):
     rule = Rule(
@@ -20,6 +23,7 @@ def test_rule_valid(context):
     )
     result = rule.validate(context)
     assert result.is_valid
+
 
 def test_rule_invalid(context):
     rule = Rule(

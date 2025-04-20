@@ -105,7 +105,7 @@ class TestConfigParser:
 
         with pytest.raises(ValueError) as excinfo:
             ConfigParser.parse_file(str(invalid_path))
-        
+
         assert "サポートされていないファイル形式" in str(excinfo.value)
 
 
@@ -230,7 +230,7 @@ class TestPydanticModels:
                     "error_message": "Field1 is required",
                 }
             ],
-            "output": {"format": "json"}
+            "output": {"format": "json"},
         }
         model = ConfigModel.model_validate(config_data)
         assert model.fields["field1"] == "Sheet1!A1"
@@ -242,7 +242,7 @@ class TestPydanticModels:
         """無効なセル参照を含む設定データがエラーになることをテスト"""
         config_data = {
             "fields": {"field1": "InvalidFormat"},  # 不正なセル参照形式
-            "rules": []
+            "rules": [],
         }
         with pytest.raises(ValueError) as excinfo:
             ConfigModel.model_validate(config_data)
@@ -305,17 +305,17 @@ class TestPydanticModels:
         valid_expr = {
             "all_of": [
                 {"field": "field1", "required": True},
-                {"compare": {"left": "field2", "operator": "==", "right": "value"}}
+                {"compare": {"left": "field2", "operator": "==", "right": "value"}},
             ]
         }
         expr = AllOfExpression.model_validate(valid_expr)
         assert len(expr.all_of) == 2
-        
+
         # このテストは修正されたモデル検証方法に対応させる
         # 元の項目がRequiredExpressionに変換されていること
         assert expr.all_of[0].field == "field1"
         assert expr.all_of[0].required is True
-        
+
         # 元の項目がCompareExpressionに変換されていること
         assert "left" in expr.all_of[1].compare
         assert expr.all_of[1].compare["operator"] == "=="
@@ -332,17 +332,17 @@ class TestPydanticModels:
         valid_expr = {
             "any_of": [
                 {"field": "field1", "required": True},
-                {"compare": {"left": "field2", "operator": "==", "right": "value"}}
+                {"compare": {"left": "field2", "operator": "==", "right": "value"}},
             ]
         }
         expr = AnyOfExpression.model_validate(valid_expr)
         assert len(expr.any_of) == 2
-        
+
         # このテストは修正されたモデル検証方法に対応させる
         # 元の項目がRequiredExpressionに変換されていること
         assert expr.any_of[0].field == "field1"
         assert expr.any_of[0].required is True
-        
+
         # 元の項目がCompareExpressionに変換されていること
         assert "left" in expr.any_of[1].compare
         assert expr.any_of[1].compare["operator"] == "=="
@@ -358,7 +358,7 @@ class TestPydanticModels:
         # 有効な否定式
         valid_expr = {"not": {"field": "field1", "required": True}}
         expr = NotExpression.model_validate(valid_expr)
-        
+
         # このテストは修正されたモデル検証方法に対応させる
         # 否定対象がRequiredExpressionに変換されていること
         assert expr.not_.field == "field1"
@@ -387,10 +387,10 @@ class TestConfigLoader:
                         "properties": {
                             "name": {"type": "string"},
                             "expression": {"type": "object"},
-                            "error_message": {"type": "string"}
+                            "error_message": {"type": "string"},
                         },
-                        "required": ["name", "expression", "error_message"]
-                    }
+                        "required": ["name", "expression", "error_message"],
+                    },
                 },
             },
             "required": ["fields", "rules"],
@@ -412,7 +412,7 @@ class TestConfigLoader:
                     "error_message": "Field1 is required",
                 }
             ],
-            "output": {"format": "json"}
+            "output": {"format": "json"},
         }
         with open(config_path, "w", encoding="utf-8") as f:
             yaml.dump(config_data, f)
@@ -442,7 +442,7 @@ class TestConfigLoader:
                     "error_message": "Field1 is required",
                 }
             ],
-            "output": {"format": "json"}
+            "output": {"format": "json"},
         }
         with open(config_path, "w", encoding="utf-8") as f:
             json.dump(config_data, f)
@@ -471,7 +471,7 @@ class TestConfigLoader:
                     "expression": {"field": "field1", "required": True},
                     "error_message": "Field1 is required",
                 }
-            ]
+            ],
         }
         with open(config_path, "w", encoding="utf-8") as f:
             yaml.dump(invalid_config, f)
@@ -488,7 +488,7 @@ class TestConfigLoader:
         temp_dir = tempfile.mkdtemp()
         default_schema_path = Path(temp_dir) / "docs" / "rule-schema.json"
         default_schema_path.parent.mkdir(parents=True, exist_ok=True)
-        
+
         schema = {
             "$schema": "https://json-schema.org/draft/2020-12/schema",
             "type": "object",
@@ -503,9 +503,9 @@ class TestConfigLoader:
         }
         with open(default_schema_path, "w", encoding="utf-8") as f:
             json.dump(schema, f)
-            
+
         # デフォルトのスキーマパスを上書き
-        monkeypatch.setattr(ConfigLoader, 'DEFAULT_SCHEMA_PATH', str(default_schema_path))
+        monkeypatch.setattr(ConfigLoader, "DEFAULT_SCHEMA_PATH", str(default_schema_path))
 
         # テスト用設定ファイルの作成
         config_path = tmp_path / "test_config.yaml"
