@@ -188,9 +188,7 @@ class TestPydanticModels:
         # 正常系
         valid_data = {
             "fields": {"field1": "Sheet1!A1", "field2": "Data!B10"},
-            "rules": [
-                {"name": "ルール1", "expression": {"required": "field1"}, "error_message": "必須"}
-            ],
+            "rules": [{"name": "ルール1", "expression": {"required": "field1"}, "error_message": "必須"}],
             "output": {"format": "yaml"},
         }
         model = ConfigModel.model_validate(valid_data)

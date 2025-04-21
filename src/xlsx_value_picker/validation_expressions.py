@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import re
 from abc import ABC, abstractmethod
-from typing import Any, Literal, Union
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -196,7 +196,7 @@ class CompareExpression(Expression):
 class RequiredExpression(Expression):
     """必須項目式"""
 
-    required: Union[str, list[str]]  # 単一フィールドまたはフィールドのリスト
+    required: str | list[str]  # 単一フィールドまたはフィールドのリスト
 
     def validate_in(self, context: ValidationContext, error_message_template: str) -> ValidationResult:
         """
@@ -224,11 +224,11 @@ class RequiredExpression(Expression):
         else:
             # エラーフィールドとロケーションのリストを作成
             locations = [
-                location for location in 
-                [context.get_field_location(field) for field in invalid_fields] 
+                location
+                for location in [context.get_field_location(field) for field in invalid_fields]
                 if location is not None
             ]
-            
+
             # フォーマットに対応するフィールド名（複数の場合はカンマ区切り）
             field_str = ", ".join(invalid_fields)
             # エラーメッセージのフォーマット
@@ -243,8 +243,8 @@ class RequiredExpression(Expression):
 
 class IsEmptyExpression(Expression):
     """空値チェック式"""
-    
-    is_empty: Union[str, list[str]]  # 単一フィールドまたはフィールドのリスト
+
+    is_empty: str | list[str]  # 単一フィールドまたはフィールドのリスト
 
     def validate_in(self, context: ValidationContext, error_message_template: str) -> ValidationResult:
         """
@@ -272,11 +272,11 @@ class IsEmptyExpression(Expression):
         else:
             # エラーフィールドとロケーションのリストを作成
             locations = [
-                location for location in 
-                [context.get_field_location(field) for field in non_empty_fields] 
+                location
+                for location in [context.get_field_location(field) for field in non_empty_fields]
                 if location is not None
             ]
-            
+
             # フォーマットに対応するフィールド名（複数の場合はカンマ区切り）
             field_str = ", ".join(non_empty_fields)
             # エラーメッセージのフォーマット
