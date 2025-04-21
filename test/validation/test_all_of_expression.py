@@ -7,7 +7,7 @@ from xlsx_value_picker.validation_expressions import (
     AllOfExpression,
     CompareExpression,
     RegexMatchExpression,
-    RequiredFieldExpression,
+    RequiredExpression,
 )
 
 
@@ -15,7 +15,7 @@ def test_all_of_valid(validation_context):  # Use the common fixture
     expr = AllOfExpression(
         all_of=[
             CompareExpression(compare={"left_field": "age", "operator": ">=", "right": 20}),
-            RequiredFieldExpression(field="name", required=True),
+            RequiredExpression(required="name"),  # 新形式の構文を使用
             RegexMatchExpression(regex_match={"field": "email", "pattern": r"^[\w.-]+@[\w.-]+\.\w+$"}),
         ]
     )
@@ -29,7 +29,7 @@ def test_all_of_invalid(validation_context):  # Use the common fixture
     expr = AllOfExpression(
         all_of=[
             CompareExpression(compare={"left_field": "age", "operator": ">=", "right": 30}),
-            RequiredFieldExpression(field="name", required=True),
+            RequiredExpression(required="name"),  # 新形式の構文を使用
         ]
     )
     result = expr.validate_in(validation_context, "すべての条件を満たしていません")

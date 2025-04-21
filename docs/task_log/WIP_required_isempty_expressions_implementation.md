@@ -88,10 +88,40 @@
 
 ## 完了条件
 
-- [ ] 新しい `RequiredExpression` および `IsEmptyExpression` クラスの実装
-- [ ] 両クラスの単一/複数フィールド対応
-- [ ] 式検出ロジックの更新
-- [ ] 既存の `RequiredFieldExpression` の完全な削除
+- [x] 新しい `RequiredExpression` および `IsEmptyExpression` クラスの実装
+- [x] 両クラスの単一/複数フィールド対応
+- [x] 式検出ロジックの更新
+- [x] 既存の `RequiredFieldExpression` の完全な削除
 - [ ] テストコードの作成と修正、実行成功
 - [ ] サンプル YAML による動作確認
 
+## 実装状況
+
+### 2024-04-21: 実装開始
+
+- 現在のクラス構成とロジックを調査中
+- RequiredExpression、IsEmptyExpressionの実装を開始
+
+### 2024-04-21: 実装進捗
+
+- RequiredExpression と IsEmptyExpression の両クラスを実装完了
+- 単一フィールドと複数フィールドの両方に対応する機能を実装
+- 旧形式の RequiredFieldExpression クラスを完全に削除
+- 式検出ロジック（detect_expression_type）と変換ロジック（convert_expression）を更新
+
+### 2024-04-21: テスト対応
+
+- テストコードを新形式に対応するように修正中
+  - test_required_expression.py の修正完了
+  - test_all_of_expression.py の修正完了
+  - test_any_of_expression.py の修正完了
+  - test_config_loader.py の修正完了
+- CLIテスト用設定ファイル生成関数を更新
+  - test_cli_basic.py の修正完了
+  - test_cli_validation.py の修正完了
+
+### 次のステップ
+
+- 残りのCLIテストファイルの修正（test_cli_options.py など）
+- すべてのテストを実行し、全テストが成功することを確認
+- サンプルYAMLファイルを新形式に更新し、動作確認を実施

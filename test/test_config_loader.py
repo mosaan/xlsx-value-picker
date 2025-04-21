@@ -13,18 +13,15 @@ from pydantic import ValidationError as PydanticValidationError  # PydanticValid
 # テスト対象モジュールへのパスを追加
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from xlsx_value_picker.config_loader import (  # SchemaValidator を削除
+from xlsx_value_picker.config_loader import (
     ConfigLoader,
     ConfigModel,
     ConfigParser,
     OutputFormat,
     Rule,
-    # SchemaValidator, # 削除
 )
 from xlsx_value_picker.exceptions import ConfigLoadError, ConfigValidationError
-from xlsx_value_picker.validation_expressions import (
-    RequiredFieldExpression,
-)
+from xlsx_value_picker.validation_expressions import RequiredExpression
 
 
 # --- テストデータ作成用ヘルパー関数 ---
@@ -42,13 +39,13 @@ def create_valid_json(path):
 
 def create_invalid_yaml(path):
     # 不正なYAML形式
-    with open(path, "w", encoding="utf-8") as f:
+    with open(path, "w", encoding="utf-8") as f:  # 括弧の修正
         f.write("key1: value1\nkey2: [value2")  # 閉じ括弧がない
 
 
 def create_invalid_json(path):
     # 不正なJSON形式
-    with open(path, "w", encoding="utf-8") as f:
+    with open(path, "w", encoding="utf-8") as f:  # 括弧の修正
         f.write('{"key1": "value1", "key2": ')  # 値がない
 
 
@@ -123,21 +120,30 @@ class TestConfigParser:
         assert "サポートされていないファイル形式です" in str(excinfo.value)
 
 
-# TestSchemaValidator クラス全体を削除 (スキーマ検証は Pydantic に一本化)
 class TestPydanticModels:
     """Pydanticモデルのテスト"""
 
     def test_rule_model_validation(self):
         """Ruleモデルのバリデーションテスト"""
-        # 正常系
+        # 正常系 - RequiredExpressionを使用（新形式のみをサポート）
         rule_data = {
             "name": "必須チェック",
-            "expression": {"field": "field1", "required": True},
+            "expression": {"required": "field1"},
             "error_message": "必須です",
         }
         rule = Rule.model_validate(rule_data)
-        assert isinstance(rule.expression, RequiredFieldExpression)
-        assert rule.expression.field == "field1"
+        assert isinstance(rule.expression, RequiredExpression)
+        assert rule.expression.required == "field1"
+
+        # 複数フィールドの場合
+        rule_data_multi = {
+            "name": "複数必須チェック",
+            "expression": {"required": ["field1", "field2"]},
+            "error_message": "必須フィールドです",
+        }
+        rule_multi = Rule.model_validate(rule_data_multi)
+        assert isinstance(rule_multi.expression, RequiredExpression)
+        assert rule_multi.expression.required == ["field1", "field2"]
 
         # 異常系 (不正な式タイプ)
         invalid_rule_data = {
@@ -145,10 +151,8 @@ class TestPydanticModels:
             "expression": {"unknown_type": {}},
             "error_message": "エラー",
         }
-        # 修正: ValueError -> PydanticValidationError, メッセージのアサートは削除
         with pytest.raises(PydanticValidationError):
             Rule.model_validate(invalid_rule_data)
-        # assert "Input tag 'unknown_type' found using" in str(excinfo.value) # メッセージは不安定なためチェックしない
 
     def test_output_format_validation(self):
         """OutputFormatモデルのバリデーションテスト"""
@@ -185,7 +189,7 @@ class TestPydanticModels:
         valid_data = {
             "fields": {"field1": "Sheet1!A1", "field2": "Data!B10"},
             "rules": [
-                {"name": "ルール1", "expression": {"field": "field1", "required": True}, "error_message": "必須"}
+                {"name": "ルール1", "expression": {"required": "field1"}, "error_message": "必須"}
             ],
             "output": {"format": "yaml"},
         }
@@ -196,18 +200,14 @@ class TestPydanticModels:
 
         # 異常系 (fields が空)
         invalid_data1 = {"fields": {}, "rules": [], "output": {"format": "json"}}
-        # 修正: ConfigValidationError -> PydanticValidationError
         with pytest.raises(PydanticValidationError) as excinfo1:
             ConfigModel.model_validate(invalid_data1)
-        # assert "少なくとも1つのフィールド定義が必要" in str(excinfo1.value) # Pydantic V2 のエラーメッセージを確認
         assert "Value error, 少なくとも1つのフィールド定義が必要です" in str(excinfo1.value)
 
         # 異常系 (不正なセル参照)
         invalid_data2 = {"fields": {"f1": "Sheet1A1"}, "rules": [], "output": {"format": "json"}}
-        # 修正: ConfigValidationError -> PydanticValidationError
         with pytest.raises(PydanticValidationError) as excinfo2:
             ConfigModel.model_validate(invalid_data2)
-        # assert "無効なセル参照形式です" in str(excinfo2.value) # Pydantic V2 のエラーメッセージを確認
         assert "Value error, 無効なセル参照形式です" in str(excinfo2.value)
 
 
@@ -231,11 +231,8 @@ class TestConfigLoader:
             yaml.dump(data, f)
         return str(config_path)
 
-    # valid_schema_file フィクスチャは不要なため削除
-
-    def test_load_config_success(self, valid_config_file):  # valid_schema_file 引数を削除
+    def test_load_config_success(self, valid_config_file):
         """有効な設定ファイルを正しく読み込めることをテスト"""
-        # ConfigLoader の初期化から schema_path を削除
         loader = ConfigLoader()
         try:
             model = loader.load_config(valid_config_file)
@@ -244,17 +241,14 @@ class TestConfigLoader:
         except (ConfigLoadError, ConfigValidationError) as e:
             pytest.fail(f"設定の読み込みに失敗しました: {e}")
 
-    def test_load_config_file_not_found(self):  # valid_schema_file 引数を削除
+    def test_load_config_file_not_found(self):
         """存在しない設定ファイルを指定するとConfigLoadErrorが発生することをテスト"""
-        # ConfigLoader の初期化から schema_path を削除
         loader = ConfigLoader()
         with pytest.raises(ConfigLoadError) as excinfo:
             loader.load_config("nonexistent_config.yaml")
         assert "設定ファイルが見つかりません" in str(excinfo.value)
 
-    # test_load_config_schema_validation_error は削除 (スキーマ検証は行わない)
-
-    def test_load_config_model_validation_error(self, tmp_path):  # valid_schema_file 引数を削除
+    def test_load_config_model_validation_error(self, tmp_path):
         """モデル検証エラーが発生する設定ファイルを指定するとConfigValidationErrorが発生することをテスト"""
         # モデル検証エラー (fields が空)
         config_path = tmp_path / "model_error.yaml"
@@ -262,12 +256,8 @@ class TestConfigLoader:
         with open(config_path, "w", encoding="utf-8") as f:
             yaml.dump(data, f)
 
-        # ConfigLoader の初期化から schema_path を削除
         loader = ConfigLoader()
         with pytest.raises(ConfigValidationError) as excinfo:
             loader.load_config(str(config_path))
         assert "設定ファイルのモデル検証に失敗しました" in str(excinfo.value)
-        # assert "少なくとも1つのフィールド定義が必要" in str(excinfo.value) # Pydantic V2 の詳細メッセージを確認
         assert "Value error, 少なくとも1つのフィールド定義が必要です" in str(excinfo.value)
-
-    # test_load_config_default_schema は削除 (スキーマパスの概念がなくなったため)

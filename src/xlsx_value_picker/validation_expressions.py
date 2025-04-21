@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import re
 from abc import ABC, abstractmethod
-from typing import Any, Literal
+from typing import Any, Literal, Union
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -193,11 +193,10 @@ class CompareExpression(Expression):
             )
 
 
-class RequiredFieldExpression(Expression):
+class RequiredExpression(Expression):
     """必須項目式"""
 
-    field: str
-    required: bool = True
+    required: Union[str, list[str]]  # 単一フィールドまたはフィールドのリスト
 
     def validate_in(self, context: ValidationContext, error_message_template: str) -> ValidationResult:
         """
@@ -210,24 +209,83 @@ class RequiredFieldExpression(Expression):
         Returns:
             ValidationResult: バリデーション結果
         """
-        target_field = self.field
-        value = context.get_field_value(target_field)
+        # 単一フィールドの場合はリストに変換
+        target_fields = [self.required] if isinstance(self.required, str) else self.required
 
-        # required=Trueの場合のみチェック
-        is_valid = not self.required or (value is not None and value != "")
+        # すべてのフィールドが値を持っているかチェック
+        invalid_fields = []
+        for field in target_fields:
+            value = context.get_field_value(field)
+            if value is None or value == "":
+                invalid_fields.append(field)
 
-        if is_valid:
+        if not invalid_fields:
             return ValidationResult(is_valid=True)
         else:
+            # エラーフィールドとロケーションのリストを作成
+            locations = [
+                location for location in 
+                [context.get_field_location(field) for field in invalid_fields] 
+                if location is not None
+            ]
+            
+            # フォーマットに対応するフィールド名（複数の場合はカンマ区切り）
+            field_str = ", ".join(invalid_fields)
             # エラーメッセージのフォーマット
-            msg = error_message_template.format(field=target_field)
-            location = context.get_field_location(target_field)  # Get location
-            locations = [location] if location else []  # Create list
+            msg = error_message_template.format(field=field_str)
             return ValidationResult(
                 is_valid=False,
                 error_message=msg,
-                error_fields=[target_field],
-                error_locations=locations,  # Add location
+                error_fields=invalid_fields,
+                error_locations=locations,
+            )
+
+
+class IsEmptyExpression(Expression):
+    """空値チェック式"""
+    
+    is_empty: Union[str, list[str]]  # 単一フィールドまたはフィールドのリスト
+
+    def validate_in(self, context: ValidationContext, error_message_template: str) -> ValidationResult:
+        """
+        フィールドが空であることを検証する
+
+        Args:
+            context: バリデーションコンテキスト
+            error_message_template: エラーメッセージのテンプレート
+
+        Returns:
+            ValidationResult: バリデーション結果
+        """
+        # 単一フィールドの場合はリストに変換
+        target_fields = [self.is_empty] if isinstance(self.is_empty, str) else self.is_empty
+
+        # すべてのフィールドが空であるかチェック
+        non_empty_fields = []
+        for field in target_fields:
+            value = context.get_field_value(field)
+            if value is not None and value != "":
+                non_empty_fields.append(field)
+
+        if not non_empty_fields:
+            return ValidationResult(is_valid=True)
+        else:
+            # エラーフィールドとロケーションのリストを作成
+            locations = [
+                location for location in 
+                [context.get_field_location(field) for field in non_empty_fields] 
+                if location is not None
+            ]
+            
+            # フォーマットに対応するフィールド名（複数の場合はカンマ区切り）
+            field_str = ", ".join(non_empty_fields)
+            # エラーメッセージのフォーマット
+            msg = error_message_template.format(field=field_str)
+            return ValidationResult(
+                is_valid=False,
+                error_message=msg,
+                error_fields=non_empty_fields,
+                error_locations=locations,
             )
 
 
@@ -356,18 +414,13 @@ class AllOfExpression(Expression):
                             context.get_field_location(f) for f in result.error_fields if context.get_field_location(f)
                         ]
                         all_error_locations.extend(loc for loc in locations if loc is not None)
-                    # Optionally collect sub-messages
-                    # if result.error_message:
-                    #    sub_error_messages.append(f"Condition {i+1} failed: {result.error_message}")
 
             # 重複を排除
             unique_error_fields = sorted(set(all_error_fields))
             unique_error_locations = sorted({loc for loc in all_error_locations if loc is not None})
 
-            # エラーメッセージのフォーマット (Main message + optional sub-messages)
+            # エラーメッセージのフォーマット
             msg = error_message_template
-            # if sub_error_messages:
-            #    msg += " (" + "; ".join(sub_error_messages) + ")"
 
             return ValidationResult(
                 is_valid=False,
@@ -381,22 +434,6 @@ class AnyOfExpression(Expression):
     """いずれかの条件一致式"""
 
     any_of: list[ExpressionType]
-
-    # @model_validator(mode="before")
-    # @classmethod
-    # def validate_any_of(cls, data: dict[str, Any]) -> dict[str, Any]:
-    #     """いずれかの条件式を適切な型に変換する"""
-    #     if isinstance(data, dict) and "any_of" in data:
-    #         if not data["any_of"] or len(data["any_of"]) == 0:
-    #             raise ValueError("any_of式には少なくとも1つの条件が必要です")
-
-    #         # リスト内の各要素を適切な式型に変換
-    #         converted = []
-    #         for item in data["any_of"]:
-    #             converted.append(convert_expression(item))
-    #         data["any_of"] = converted
-
-    #     return data
 
     def validate_in(self, context: ValidationContext, error_message_template: str) -> ValidationResult:
         """
@@ -469,7 +506,6 @@ class NotExpression(Expression):
             msg = error_message_template
             # エラーフィールドと場所は、内部式の結果から取得するのではなく、
             # このNotExpression自体に関連付けるフィールドがないため空とする
-            # (もし特定のフィールドに対する否定なら、そのフィールドを別途指定する設計が必要)
             return ValidationResult(
                 is_valid=False,
                 error_message=msg,
@@ -481,7 +517,8 @@ class NotExpression(Expression):
 # すべての式型を含むUnion型
 type ExpressionType = (
     CompareExpression
-    | RequiredFieldExpression
+    | RequiredExpression
+    | IsEmptyExpression
     | RegexMatchExpression
     | EnumExpression
     | AllOfExpression
@@ -503,8 +540,10 @@ def detect_expression_type(data: dict[str, Any]) -> type[Expression]:
     """
     if "compare" in data:
         return CompareExpression
-    elif "field" in data and "required" in data:
-        return RequiredFieldExpression
+    elif "required" in data:
+        return RequiredExpression
+    elif "is_empty" in data:
+        return IsEmptyExpression
     elif "regex_match" in data:
         return RegexMatchExpression
     elif "enum" in data:
@@ -516,10 +555,8 @@ def detect_expression_type(data: dict[str, Any]) -> type[Expression]:
     elif "not" in data:
         return NotExpression
     else:
-        # デフォルトまたは不明な型の場合、基底クラスを返すかエラーを発生させるか検討
-        # ここでは基底クラスを返すが、より厳密にするならValueErrorが良いかもしれない
-        # raise ValueError(f"不明な式型です: {data}")
-        return Expression  # または適切なデフォルト処理
+        # デフォルトまたは不明な型の場合はエラーを発生させる
+        raise ValueError(f"不明な式型です: {data}")
 
 
 def convert_expression(data: dict[str, Any] | Expression) -> Expression:

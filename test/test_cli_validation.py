@@ -48,7 +48,7 @@ def create_valid_config_yaml(path, excel_path):
         "rules": [
             {
                 "name": "テストルール",
-                "expression": {"field": "value1", "required": True},
+                "expression": {"required": "value1"},  # 新形式のRequiredExpression
                 "error_message": "値1は必須です",
             }
         ],
@@ -65,7 +65,7 @@ def create_valid_config_json(path, excel_path):
         "rules": [
             {
                 "name": "テストルール",
-                "expression": {"field": "value1", "required": True},
+                "expression": {"required": "value1"},  # 新形式のRequiredExpression
                 "error_message": "値1は必須です",
             }
         ],
@@ -108,7 +108,7 @@ def create_config_with_validation_yaml(path):
                 "expression": {
                     "any_of": [
                         {"compare": {"left_field": "selection", "operator": "!=", "right": "その他"}},
-                        {"field": "comment", "required": True},
+                        {"required": "comment"},  # 新形式のRequiredExpression
                     ]
                 },
                 "error_message": "「その他」を選択した場合はコメントが必須です",
@@ -145,7 +145,7 @@ def create_config_with_failing_validation_yaml(path):
                 "expression": {
                     "any_of": [
                         {"compare": {"left_field": "selection", "operator": "!=", "right": "その他"}},
-                        {"field": "comment", "required": True},
+                        {"required": "comment"},  # 新形式のRequiredExpression
                     ]
                 },
                 "error_message": "「その他」を選択した場合はコメントが必須です",

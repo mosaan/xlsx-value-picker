@@ -29,6 +29,7 @@
         "oneOf": [
           { "$ref": "#/$defs/CompareExpression" },
           { "$ref": "#/$defs/RequiredExpression" },
+          { "$ref": "#/$defs/IsEmptyExpression" },
           { "$ref": "#/$defs/RegexMatchExpression" },
           { "$ref": "#/$defs/EnumExpression" },
           { "$ref": "#/$defs/AllOfExpression" },
@@ -73,10 +74,34 @@
       "RequiredExpression": {
         "type": "object",
         "properties": {
-          "field": { "type": "string" },
-          "required": { "type": "boolean", "const": true }
+          "required": {
+            "oneOf": [
+              { "type": "string" },
+              { 
+                "type": "array",
+                "items": { "type": "string" },
+                "minItems": 1
+              }
+            ]
+          }
         },
-        "required": ["field", "required"]
+        "required": ["required"]
+      },
+      "IsEmptyExpression": {
+        "type": "object",
+        "properties": {
+          "is_empty": {
+            "oneOf": [
+              { "type": "string" },
+              { 
+                "type": "array",
+                "items": { "type": "string" },
+                "minItems": 1
+              }
+            ]
+          }
+        },
+        "required": ["is_empty"]
       },
       "RegexMatchExpression": {
         "type": "object",

@@ -51,8 +51,7 @@ fields:
 rules:
   - name: "必須項目チェック"
     expression:
-      field: "field_name1"
-      required: true
+      required: "field_name1"
     error_message: "{field}は必須項目です"
 
   - name: "値の範囲チェック"
@@ -78,8 +77,29 @@ xlsx-value-pickerには強力なバリデーション機能が組み込まれて
 - **必須項目チェック**：`required`
   ```yaml
   expression:
-    field: "user_name"
-    required: true
+    required: "user_name"
+  ```
+  
+  複数フィールドの必須チェックも可能です：
+  ```yaml
+  expression:
+    required:
+      - "user_name"
+      - "email"
+  ```
+
+- **空値チェック**：`is_empty`
+  ```yaml
+  expression:
+    is_empty: "comment"
+  ```
+  
+  複数フィールドに対する空値チェックも可能です：
+  ```yaml
+  expression:
+    is_empty:
+      - "comment"
+      - "additional_info"
   ```
 
 - **値の比較**：`compare`
@@ -121,8 +141,7 @@ xlsx-value-pickerには強力なバリデーション機能が組み込まれて
   ```yaml
   expression:
     all_of:
-      - field: "user_name"
-        required: true
+      - required: "user_name"
       - compare:
           left_field: "age"
           operator: ">="
@@ -207,8 +226,7 @@ fields:
 rules:
   - name: "商品名必須チェック"
     expression:
-      field: "product_name"
-      required: true
+      required: "product_name"
     error_message: "商品名は必須項目です"
 
   - name: "価格範囲チェック"
@@ -240,6 +258,11 @@ rules:
         field: "category"
         values: ["A", "B", "C"]
     error_message: "カテゴリは A, B, C のいずれかを指定してください"
+
+  - name: "コメント空値チェック"
+    expression:
+      is_empty: "comment"
+    error_message: "コメントが入力されていません"
 
 # 出力形式設定
 output:

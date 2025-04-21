@@ -119,22 +119,45 @@ class CompareExpression(Expression):
 
 class RequiredExpression(Expression):
     """必須項目式モデル"""
-    field: str
-    required: bool = True # スキーマ定義に合わせてフィールドを持つ
+    required: Union[str, List[str]]  # 単一または複数フィールド名を指定可能
 
     def validate(self, context: ValidationContext, error_message_template: str) -> ValidationResult:
-        target_field = self.field
-        value = context.get_field_value(target_field)
-
-        # --- 必須チェックロジック ---
-        # required=True の場合のみチェック (Falseの場合は常にTrue)
-        is_valid = not self.required or (value is not None and value != "") # 空文字列もNGとする例
-
-        if is_valid:
+        # フィールド名が単一文字列か複数のリストかを判定
+        fields = [self.required] if isinstance(self.required, str) else self.required
+        
+        # すべての指定フィールドが値を持っているかチェック
+        invalid_fields = []
+        for field in fields:
+            value = context.get_field_value(field)
+            if value is None or value == "":  # 空文字列もNGとする
+                invalid_fields.append(field)
+        
+        if not invalid_fields:  # すべてのフィールドが値を持っている
             return ValidationResult(is_valid=True)
         else:
-            msg = error_message_template.format(field=target_field)
-            return ValidationResult(is_valid=False, error_message=msg, error_fields=[target_field])
+            msg = error_message_template.format(field=", ".join(invalid_fields))
+            return ValidationResult(is_valid=False, error_message=msg, error_fields=invalid_fields)
+
+class IsEmptyExpression(Expression):
+    """空値チェック式モデル"""
+    is_empty: Union[str, List[str]]  # 単一または複数フィールド名を指定可能
+
+    def validate(self, context: ValidationContext, error_message_template: str) -> ValidationResult:
+        # フィールド名が単一文字列か複数のリストかを判定
+        fields = [self.is_empty] if isinstance(self.is_empty, str) else self.is_empty
+        
+        # すべての指定フィールドが空かどうかチェック
+        non_empty_fields = []
+        for field in fields:
+            value = context.get_field_value(field)
+            if value is not None and value != "":  # 値がある場合
+                non_empty_fields.append(field)
+        
+        if not non_empty_fields:  # すべてのフィールドが空
+            return ValidationResult(is_valid=True)
+        else:
+            msg = error_message_template.format(field=", ".join(non_empty_fields))
+            return ValidationResult(is_valid=False, error_message=msg, error_fields=non_empty_fields)
 
 # --- 複合ルール式モデル ---
 # 前方参照とUnion型 (ExpressionType) を利用 (config_loader.py で定義済み想定)
@@ -163,7 +186,7 @@ class AnyOfExpression(Expression):
 
 # --- ExpressionType Union ---
 # config_loader.py などで定義される想定
-# ExpressionType = Union[CompareExpression, RequiredExpression, AnyOfExpression, AllOfExpression, NotExpression, ...]
+# ExpressionType = Union[CompareExpression, RequiredExpression, IsEmptyExpression, AnyOfExpression, AllOfExpression, NotExpression, ...]
 
 ```
 
@@ -226,13 +249,23 @@ rules:  # バリデーションルール定義 (RuleModelリストに対応)
     expression: # ExpressionTypeに対応 (Pydanticが自動判別)
       any_of: # AnyOfExpressionに対応
         - compare: # CompareExpressionに対応
-            left: "animal_select"
+            left_field: "animal_select"
             operator: "!="
             right: "その他"
-        - required: # RequiredExpressionに対応 (※スキーマ定義は実装と整合させる必要あり)
-            field: "animal_free_text"
-            # required: true # requiredフィールドはモデル定義でデフォルトTrue想定
+        - required: "animal_free_text" # 新形式のRequiredExpression
     error_message: "「{field}」は、「その他」を選んだ場合に必須です。" # メッセージテンプレート例
+
+  - name: "複数フィールド必須チェック"
+    expression:
+      required: # 複数フィールドの必須チェック
+        - "name"
+        - "email"
+    error_message: "{field}は必須項目です" # メッセージテンプレート例
+
+  - name: "空値チェック"
+    expression:
+      is_empty: "comment" # IsEmptyExpressionの使用例
+    error_message: "コメントが入力されていません" # メッセージテンプレート例
 
 output:
   # ... (出力設定)
