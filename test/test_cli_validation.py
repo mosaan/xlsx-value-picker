@@ -100,14 +100,14 @@ def create_config_with_validation_yaml(path):
             },
             {
                 "name": "年齢チェック",
-                "expression": {"compare": {"left": "age", "operator": ">=", "right": 18}},
+                "expression": {"compare": {"left_field": "age", "operator": ">=", "right": 18}},
                 "error_message": "{field}は18歳以上である必要があります（現在: {left_value}歳）",
             },
             {
                 "name": "その他選択時コメント必須",
                 "expression": {
                     "any_of": [
-                        {"compare": {"left": "selection", "operator": "!=", "right": "その他"}},
+                        {"compare": {"left_field": "selection", "operator": "!=", "right": "その他"}},
                         {"field": "comment", "required": True},
                     ]
                 },
@@ -137,14 +137,14 @@ def create_config_with_failing_validation_yaml(path):
             },
             {
                 "name": "年齢チェック",
-                "expression": {"compare": {"left": "age", "operator": ">=", "right": 18}},
+                "expression": {"compare": {"left_field": "age", "operator": ">=", "right": 18}},
                 "error_message": "{field}は18歳以上である必要があります（現在: {left_value}歳）",
             },
             {
                 "name": "その他選択時コメント必須",
                 "expression": {
                     "any_of": [
-                        {"compare": {"left": "selection", "operator": "!=", "right": "その他"}},
+                        {"compare": {"left_field": "selection", "operator": "!=", "right": "その他"}},
                         {"field": "comment", "required": True},
                     ]
                 },

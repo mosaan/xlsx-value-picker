@@ -14,7 +14,7 @@ from xlsx_value_picker.validation_expressions import (
 def test_all_of_valid(validation_context):  # Use the common fixture
     expr = AllOfExpression(
         all_of=[
-            CompareExpression(compare={"left": "age", "operator": ">=", "right": 20}),
+            CompareExpression(compare={"left_field": "age", "operator": ">=", "right": 20}),
             RequiredFieldExpression(field="name", required=True),
             RegexMatchExpression(regex_match={"field": "email", "pattern": r"^[\w.-]+@[\w.-]+\.\w+$"}),
         ]
@@ -28,7 +28,7 @@ def test_all_of_invalid(validation_context):  # Use the common fixture
     validation_context.cell_values["age"] = 15  # Make age invalid
     expr = AllOfExpression(
         all_of=[
-            CompareExpression(compare={"left": "age", "operator": ">=", "right": 30}),
+            CompareExpression(compare={"left_field": "age", "operator": ">=", "right": 30}),
             RequiredFieldExpression(field="name", required=True),
         ]
     )
@@ -44,7 +44,7 @@ def test_all_of_multiple_invalid(validation_context):  # Use the common fixture
     validation_context.cell_values["email"] = "invalid-email"  # Make email invalid for the pattern below
     expr = AllOfExpression(
         all_of=[
-            CompareExpression(compare={"left": "age", "operator": ">=", "right": 30}),
+            CompareExpression(compare={"left_field": "age", "operator": ">=", "right": 30}),
             RegexMatchExpression(
                 regex_match={"field": "email", "pattern": r"^[\w]+$"}
             ),  # Pattern expects only word characters

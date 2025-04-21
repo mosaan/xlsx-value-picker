@@ -17,7 +17,7 @@ def test_validate(mock_get_excel_values):
 
     rule1 = Rule(
         name="年齢チェック",
-        expression=CompareExpression(compare={"left": "age", "operator": ">=", "right": 20}),
+        expression=CompareExpression(compare={"left_field": "age", "operator": ">=", "right": 20}),
         error_message="{field}は20以上である必要があります",
     )
     rule2 = Rule(

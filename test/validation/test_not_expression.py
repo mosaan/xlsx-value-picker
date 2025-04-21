@@ -10,7 +10,7 @@ def test_not_valid(validation_context):  # Use the common fixture
     # The inner expression (age < 20) is False because age is 25.
     # So, NotExpression should be True.
     expr = NotExpression.model_validate(
-        {"not": CompareExpression(compare={"left": "age", "operator": "<", "right": 20})}
+        {"not": CompareExpression(compare={"left_field": "age", "operator": "<", "right": 20})}
     )
     result = expr.validate_in(validation_context, "条件に合致してはいけません")
     assert result.is_valid
@@ -20,7 +20,7 @@ def test_not_invalid(validation_context):  # Use the common fixture
     # The inner expression (age > 20) is True because age is 25.
     # So, NotExpression should be False.
     expr = NotExpression.model_validate(
-        {"not": CompareExpression(compare={"left": "age", "operator": ">", "right": 20})}
+        {"not": CompareExpression(compare={"left_field": "age", "operator": ">", "right": 20})}
     )
     result = expr.validate_in(validation_context, "条件に合致してはいけません")
     assert not result.is_valid

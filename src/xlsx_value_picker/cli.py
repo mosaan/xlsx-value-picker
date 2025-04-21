@@ -57,16 +57,16 @@ def _write_validation_log(log_path: str, validation_results: list[ValidationResu
         click.echo(f"ログ出力に失敗しました: {e}", err=True)
 
 
-@click.command()  # type: ignore
-@click.argument("excel_file", type=click.Path(exists=True, file_okay=True, dir_okay=False))  # type: ignore
-@click.option("-c", "--config", default="config.yaml", help="検証ルールや設定を記述した設定ファイル")  # type: ignore
-@click.option("--ignore-errors", is_flag=True, help="検証エラーが発生しても処理を継続します")  # type: ignore
-@click.option("-o", "--output", help="出力先ファイルを指定します（未指定の場合は標準出力）")  # type: ignore
-@click.option("--log", help="検証エラーを記録するログファイルを指定します")  # type: ignore
+@click.command()
+@click.argument("excel_file", type=click.Path(exists=True, file_okay=True, dir_okay=False))
+@click.option("-c", "--config", default="config.yaml", help="検証ルールや設定を記述した設定ファイル")
+@click.option("--ignore-errors", is_flag=True, help="検証エラーが発生しても処理を継続します")
+@click.option("-o", "--output", help="出力先ファイルを指定します（未指定の場合は標準出力）")
+@click.option("--log", help="検証エラーを記録するログファイルを指定します")
 # --schema オプションは削除 (スキーマ検証は Pydantic に一本化)
-@click.option("--include-empty-cells", is_flag=True, help="空セルも出力に含めます")  # type: ignore
-@click.option("--validate-only", is_flag=True, help="バリデーションのみを実行します")  # type: ignore
-@click.version_option(version="0.3.0")  # type: ignore
+@click.option("--include-empty-cells", is_flag=True, help="空セルも出力に含めます")
+@click.option("--validate-only", is_flag=True, help="バリデーションのみを実行します")
+@click.version_option(version="0.3.0")
 def main(  # 戻り値型を追加
     excel_file: str,
     config: str,

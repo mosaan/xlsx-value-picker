@@ -15,7 +15,7 @@ def test_any_of_valid(validation_context):  # Use the common fixture
     # Ensure at least one condition is met by the default context
     expr = AnyOfExpression(
         any_of=[
-            CompareExpression(compare={"left": "age", "operator": ">=", "right": 20}),  # This is true (25 >= 20)
+            CompareExpression(compare={"left_field": "age", "operator": ">=", "right": 20}),  # This is true (25 >= 20)
             RequiredFieldExpression(field="name", required=True),  # This is true ("テスト" is not empty)
             RegexMatchExpression(regex_match={"field": "email", "pattern": r"^[\w.-]+@[\w.-]+\.\w+$"}),  # This is true
         ]
@@ -31,7 +31,7 @@ def test_any_of_all_invalid(validation_context):  # Use the common fixture
     validation_context.cell_values["email"] = "invalid"
     expr = AnyOfExpression(
         any_of=[
-            CompareExpression(compare={"left": "age", "operator": ">=", "right": 20}),  # False (15 < 20)
+            CompareExpression(compare={"left_field": "age", "operator": ">=", "right": 20}),  # False (15 < 20)
             RequiredFieldExpression(field="name", required=True),  # False ("" is empty)
             RegexMatchExpression(
                 regex_match={"field": "email", "pattern": r"^[\w.-]+@[\w.-]+\.\w+$"}

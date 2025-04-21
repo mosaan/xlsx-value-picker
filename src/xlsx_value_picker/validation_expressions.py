@@ -8,7 +8,7 @@ import re
 from abc import ABC, abstractmethod
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 # validation_common から必要なクラスをインポート
 from .validation_common import ValidationContext, ValidationResult
@@ -53,12 +53,69 @@ class Expression(BaseModel, IExpression):
         return ValidationResult(is_valid=True)
 
 
+class UNDEFINED(BaseModel):
+    """未指定値を表すマーカークラス"""
+
+    some_internal_value: str = "THIS_IS_MARKER_VALUE"
+    # ここでは内部的な値を持たせるが、実際には値は必要ない
+
+
+_UNDEFINED = UNDEFINED()  # 一つしか値はいらないので生成してしまう。
+
+
 class CompareExpressionParams(BaseModel):
     """比較式のパラメータを定義するクラス"""
 
-    left: str | int | float | bool | None
+    left: str | int | float | bool | None | UNDEFINED = _UNDEFINED
+    left_field: str | UNDEFINED = _UNDEFINED
     operator: Literal["==", "!=", ">", ">=", "<", "<="]
-    right: str | int | float | bool | None
+    right: str | int | float | bool | None | UNDEFINED = _UNDEFINED
+    right_field: str | UNDEFINED = _UNDEFINED
+
+    @model_validator(mode="after")
+    def validate_compare_params(self) -> CompareExpressionParams:
+        """
+        left または left_field、right または right_field のいずれかのみが指定されていることを確認する
+        """
+        if (isinstance(self.left, UNDEFINED) and isinstance(self.left_field, UNDEFINED)) or (
+            isinstance(self.right, UNDEFINED) and isinstance(self.right_field, UNDEFINED)
+        ):
+            raise ValueError("left または left_field、right または right_field のいずれかを指定してください。")
+        if (isinstance(self.left, UNDEFINED) and isinstance(self.left_field, UNDEFINED)) or (
+            isinstance(self.right, UNDEFINED) and isinstance(self.right_field, UNDEFINED)
+        ):
+            raise ValueError("left と left_field、または right と right_field の両方を同時に指定することはできません。")
+        return self
+
+    def get_left_value(self, context: ValidationContext) -> str | int | float | bool | None:
+        """
+        left または left_field の値を取得する
+
+        Returns:
+            str | int | float | bool | None: left または left_field の値
+        """
+        return (
+            self.left
+            if not isinstance(self.left, UNDEFINED)
+            else context.get_field_value(self.left_field)
+            if not isinstance(self.left_field, UNDEFINED)
+            else None
+        )
+
+    def get_right_value(self, context: ValidationContext) -> str | int | float | bool | None:
+        """
+        right または right_field の値を取得する
+
+        Returns:
+            str | int | float | bool | None: right または right_field の値
+        """
+        return (
+            self.right
+            if not isinstance(self.right, UNDEFINED)
+            else context.get_field_value(self.right_field)
+            if not isinstance(self.right_field, UNDEFINED)
+            else None
+        )
 
 
 class CompareExpression(Expression):
@@ -77,26 +134,36 @@ class CompareExpression(Expression):
         Returns:
             ValidationResult: バリデーション結果
         """
-        left_field = self.compare.left
+        left_field = self.compare.left_field
+        right_field = self.compare.right_field
         operator = self.compare.operator
-        right_value = self.compare.right
-        left_value = context.get_field_value(left_field) if isinstance(left_field, str) else left_field
+        right_value = self.compare.get_right_value(context)
+        left_value = self.compare.get_left_value(context)
 
         # 比較ロジック
         is_valid = False
         try:
-            if operator == "==":
-                is_valid = left_value == right_value
-            elif operator == "!=":
-                is_valid = left_value != right_value
-            elif operator == ">" and left_value is not None and right_value is not None :
-                is_valid = left_value > right_value
-            elif operator == ">=" and left_value is not None and right_value is not None :
-                is_valid = left_value >= right_value
-            elif operator == "<" and left_value is not None and right_value is not None :
-                is_valid = left_value < right_value
-            elif operator == "<=" and left_value is not None and right_value is not None :
-                is_valid = left_value <= right_value
+            match operator:
+                case "==":
+                    is_valid = left_value == right_value
+                case "!=":
+                    is_valid = left_value != right_value
+                case ">":
+                    # 型変換や型チェックを行い、比較可能な場合のみ比較を実行
+                    if left_value is not None and right_value is not None and isinstance(left_value, type(right_value)):
+                        is_valid = left_value > right_value
+                case ">=":
+                    if left_value is not None and right_value is not None and isinstance(left_value, type(right_value)):
+                        is_valid = left_value >= right_value
+                case "<":
+                    if left_value is not None and right_value is not None and isinstance(left_value, type(right_value)):
+                        is_valid = left_value < right_value
+                case "<=":
+                    if left_value is not None and right_value is not None and isinstance(left_value, type(right_value)):
+                        is_valid = left_value <= right_value
+                case _:
+                    # 未知の演算子の場合
+                    is_valid = False
         except (TypeError, ValueError):
             # 型が異なる場合や比較不能な場合は無効とする
             is_valid = False
@@ -104,21 +171,25 @@ class CompareExpression(Expression):
         if is_valid:
             return ValidationResult(is_valid=True)
         else:
+            fields = [v for v in [left_field, right_field] if not isinstance(v, UNDEFINED)]
             # エラーメッセージのフォーマット
             msg = error_message_template.format(
                 left_field=left_field,
                 left_value=left_value,
-                operator=operator,
+                right_field=right_field,
                 right_value=right_value,
-                field=left_field,  # 'field'も追加（テンプレートで使用される可能性あり）
+                operator=operator,
+                field=", ".join(fields),
             )
-            location = context.get_field_location(left_field)
-            locations = [location] if location else []
+            # left_fieldがstr型である場合のみlocationを取得
             return ValidationResult(
                 is_valid=False,
                 error_message=msg,
-                error_fields=[left_field],
-                error_locations=locations,  # Add location
+                error_fields=fields,
+                error_locations=[
+                    location if location is not None else "NOT_FOUND"
+                    for location in {context.get_field_location(field) for field in fields}
+                ],  # Add location
             )
 
 
