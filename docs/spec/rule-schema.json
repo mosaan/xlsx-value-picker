@@ -43,13 +43,29 @@
             "type": "object",
             "properties": {
               "left": { "type": "string" },
+              "left_field": { "type": "string" },
               "operator": {
                 "type": "string",
                 "enum": ["==", "!=", ">", ">=", "<", "<="]
               },
-              "right": { "oneOf": [{ "type": "string" }, { "type": "number" }] }
+              "right": { "oneOf": [{ "type": "string" }, { "type": "number" }] },
+              "right_field": { "type": "string" }
             },
-            "required": ["left", "operator", "right"]
+            "required": ["operator"],
+            "allOf": [
+              {
+                "oneOf": [
+                  { "required": ["left"] },
+                  { "required": ["left_field"] }
+                ]
+              },
+              {
+                "oneOf": [
+                  { "required": ["right"] },
+                  { "required": ["right_field"] }
+                ]
+              }
+            ]
           }
         },
         "required": ["compare"]
@@ -124,4 +140,3 @@
       }
     }
   }
-  

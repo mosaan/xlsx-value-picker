@@ -58,7 +58,7 @@ rules:
   - name: "値の範囲チェック"
     expression:
       compare:
-        left: "field_name2"
+        left_field: "field_name2"
         operator: ">"
         right: 0
     error_message: "{field}は0より大きい値を入力してください"
@@ -86,9 +86,18 @@ xlsx-value-pickerには強力なバリデーション機能が組み込まれて
   ```yaml
   expression:
     compare:
-      left: "quantity"
+      left_field: "quantity"
       operator: ">"  # "==", "!=", ">", ">=", "<", "<="
       right: 0
+  ```
+  
+  または、別のフィールドと比較する場合：
+  ```yaml
+  expression:
+    compare:
+      left_field: "total_price"  # 他のフィールドを参照
+      operator: ">"
+      right_field: "threshold_price"  # 他のフィールドを参照
   ```
 
 - **正規表現マッチ**：`regex_match`
@@ -115,7 +124,7 @@ xlsx-value-pickerには強力なバリデーション機能が組み込まれて
       - field: "user_name"
         required: true
       - compare:
-          left: "age"
+          left_field: "age"
           operator: ">="
           right: 18
   ```
@@ -125,11 +134,11 @@ xlsx-value-pickerには強力なバリデーション機能が組み込まれて
   expression:
     any_of:
       - compare:
-          left: "payment_method"
+          left_field: "payment_method"
           operator: "=="
           right: "銀行振込"
       - compare:
-          left: "payment_method"
+          left_field: "payment_method"
           operator: "=="
           right: "クレジットカード"
   ```
@@ -139,8 +148,8 @@ xlsx-value-pickerには強力なバリデーション機能が組み込まれて
   expression:
     not:
       compare:
-        left: "status"
-        operator: "=="
+        left_field: "status"
+        operator: "==" # notでラップされているため実質的に"!="に相当
         right: "完了"
   ```
 
@@ -205,7 +214,7 @@ rules:
   - name: "価格範囲チェック"
     expression:
       compare:
-        left: "price"
+        left_field: "price"
         operator: ">"
         right: 0
     error_message: "価格は0より大きい値を入力してください"
@@ -213,7 +222,7 @@ rules:
   - name: "在庫数チェック"
     expression:
       compare:
-        left: "stock"
+        left_field: "stock"
         operator: ">="
         right: 0
     error_message: "在庫数は0以上の値を入力してください"
