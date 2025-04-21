@@ -4,7 +4,7 @@ JSONスキーマに基づく設定データ読み込み機能
 
 import json
 import os
-from typing import Any
+from typing import Any, Self, cast
 
 import yaml
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -13,14 +13,14 @@ from pydantic import ValidationError as PydanticValidationError
 # カスタム例外をインポート
 from .exceptions import ConfigLoadError, ConfigValidationError, XlsxValuePickerError
 from .validation_common import ValidationContext, ValidationResult
-from .validation_expressions import ExpressionType, convert_expression
+from .validation_expressions import ExpressionType
 
 # ConfigValidationError は exceptions.py に移動済みのため削除
 
 
 class ConfigParser:
     @staticmethod
-    def parse_file(file_path: str) -> dict:
+    def parse_file(file_path: str) -> dict[str, Any]:
         """
         設定ファイル（YAMLまたはJSON）を読み込み、Pythonオブジェクトに変換する
 
@@ -40,9 +40,11 @@ class ConfigParser:
         try:
             with open(file_path, encoding="utf-8") as f:
                 if file_path.endswith(".yaml") or file_path.endswith(".yml"):
-                    return yaml.safe_load(f)
+                    # yaml.safe_load は Any を返すため、cast と ignore を使用
+                    return cast(dict[str, Any], yaml.safe_load(f))
                 elif file_path.endswith(".json"):
-                    return json.load(f)
+                    # json.load は Any を返すため、cast と ignore を使用
+                    return cast(dict[str, Any], json.load(f))
                 else:
                     # ValueError の代わりに ConfigLoadError を送出
                     raise ConfigLoadError(f"サポートされていないファイル形式です: {file_path}")
@@ -61,16 +63,16 @@ class Rule(BaseModel):
     expression: ExpressionType
     error_message: str
 
-    @model_validator(mode="before")
-    @classmethod
-    def validate_expression(cls, data: dict[str, Any]):
-        """式のデータを適切な型に変換する"""
-        if isinstance(data, dict) and "expression" in data and isinstance(data["expression"], dict):
-            # validation_expressions の convert_expression を使用
-            data["expression"] = convert_expression(data["expression"])
-        return data
+    # @model_validator(mode="before")
+    # @classmethod
+    # def validate_expression(cls, data: dict[str, Any]) -> dict[str, Any]:
+    #     """式のデータを適切な型に変換する"""
+    #     if isinstance(data, dict) and "expression" in data and isinstance(data["expression"], dict):
+    #         # validation_expressions の convert_expression を使用
+    #         data["expression"] = convert_expression(data["expression"])
+    #     return data
 
-    def validate(self, context: ValidationContext) -> ValidationResult:
+    def validate(self, context: ValidationContext) -> ValidationResult:  # type: ignore[override]
         """
         ルールのバリデーションを実行する
 
@@ -81,7 +83,7 @@ class Rule(BaseModel):
             ValidationResult: バリデーション結果
         """
         # 内部の式を評価 (self.expression は ExpressionType)
-        result: ValidationResult = self.expression.validate(context, self.error_message)
+        result: ValidationResult = self.expression.validate_in(context, self.error_message)
 
         # ルール名と場所情報を追加
         if not result.is_valid:
@@ -92,7 +94,7 @@ class Rule(BaseModel):
                     context.get_field_location(f) for f in result.error_fields if context.get_field_location(f)
                 ]
                 result.error_locations = sorted(
-                    set(locations)
+                    {loc for loc in locations if loc is not None}  # 明示的にセット内包表記でフィルタリング
                 )  # Use set to avoid duplicates if expression already added some
 
         return result
@@ -106,7 +108,7 @@ class OutputFormat(BaseModel):
     template: str | None = None
 
     @model_validator(mode="after")
-    def check_jinja2_template(self):
+    def check_jinja2_template(self) -> Self:
         """Jinja2形式の場合はテンプレートが必要"""
         if self.format == "jinja2" and not (self.template_file or self.template):
             raise ValueError("Jinja2出力形式の場合、template_fileまたはtemplateが必要です")
@@ -131,7 +133,7 @@ class ConfigModel(BaseModel):
 
     @field_validator("fields")
     @classmethod
-    def validate_fields(cls, v):
+    def validate_fields(cls: type["ConfigModel"], v: dict[str, str]) -> dict[str, str]:
         """フィールド定義の検証"""
         import re  # re をインポート
 
@@ -151,7 +153,7 @@ class ConfigLoader:
 
     # DEFAULT_SCHEMA_PATH は不要なため削除
 
-    def __init__(self):
+    def __init__(self) -> None:
         """
         初期化
         (スキーマ検証を行わないため、引数は不要)
@@ -196,3 +198,8 @@ class ConfigLoader:
         except Exception as e:
             # その他の予期せぬエラー
             raise XlsxValuePickerError(f"設定ファイルの処理中に予期せぬエラーが発生しました: {e}") from e
+
+
+# Pydanticモデルの循環参照を解決するために再構築
+Rule.model_rebuild()
+ConfigModel.model_rebuild()

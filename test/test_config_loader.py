@@ -23,7 +23,7 @@ from xlsx_value_picker.config_loader import (  # SchemaValidator を削除
 )
 from xlsx_value_picker.exceptions import ConfigLoadError, ConfigValidationError
 from xlsx_value_picker.validation_expressions import (
-    RequiredExpression,
+    RequiredFieldExpression,
 )
 
 
@@ -136,7 +136,7 @@ class TestPydanticModels:
             "error_message": "必須です",
         }
         rule = Rule.model_validate(rule_data)
-        assert isinstance(rule.expression, RequiredExpression)
+        assert isinstance(rule.expression, RequiredFieldExpression)
         assert rule.expression.field == "field1"
 
         # 異常系 (不正な式タイプ)

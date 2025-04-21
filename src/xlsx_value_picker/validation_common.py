@@ -53,7 +53,7 @@ class ValidationResult:
     severity: str = "error"
     rule_name: str | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         # error_fieldsが指定されていない場合は空のリストに初期化
         if not self.is_valid and self.error_fields is None:
             self.error_fields = []

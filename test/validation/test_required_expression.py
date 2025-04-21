@@ -5,7 +5,7 @@ RequiredExpressionのpytestテスト
 import pytest
 
 # Expression関連は validation_expressions からインポート
-from xlsx_value_picker.validation_expressions import RequiredExpression
+from xlsx_value_picker.validation_expressions import RequiredFieldExpression
 
 # Remove the context fixture, it's now in conftest.py
 
@@ -31,8 +31,8 @@ def test_required_expression(validation_context, field, required, expected_valid
     if test_value_override is not None:
         validation_context.cell_values[field] = test_value_override
 
-    expr = RequiredExpression(field=field, required=required)
-    result = expr.validate(validation_context, "{field}は必須項目です")
+    expr = RequiredFieldExpression(field=field, required=required)
+    result = expr.validate_in(validation_context, "{field}は必須項目です")
 
     assert result.is_valid == expected_valid
     if not expected_valid:

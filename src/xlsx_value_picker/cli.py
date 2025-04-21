@@ -2,7 +2,7 @@ import json
 import sys
 from typing import Any
 
-import click  # type: ignore
+import click
 
 from .config_loader import ConfigLoader, ConfigModel, OutputFormat
 from .excel_processor import ExcelValueExtractor

@@ -2,11 +2,13 @@
 バリデーション式モデル定義
 """
 
+from __future__ import annotations
+
 import re
 from abc import ABC, abstractmethod
-from typing import Any, ForwardRef
+from typing import Any, Union
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, field_validator
 
 # validation_common から必要なクラスをインポート
 from .validation_common import ValidationContext, ValidationResult
@@ -16,7 +18,7 @@ class IExpression(ABC):
     """バリデーション式のインターフェース"""
 
     @abstractmethod
-    def validate(self, context: ValidationContext, error_message_template: str) -> ValidationResult:
+    def validate_in(self, context: ValidationContext, error_message_template: str) -> ValidationResult:
         """
         ルール式の検証を行い結果を返す
 
@@ -33,7 +35,7 @@ class IExpression(ABC):
 class Expression(BaseModel, IExpression):
     """バリデーション式の基底クラス"""
 
-    def validate(self, context: ValidationContext, error_message_template: str) -> ValidationResult:
+    def validate_in(self, context: ValidationContext, error_message_template: str) -> ValidationResult:
         """
         バリデーションを実行する（基底クラス実装）
 
@@ -57,14 +59,14 @@ class CompareExpression(Expression):
     compare: dict[str, Any]
 
     @field_validator("compare")
-    def validate_compare(cls, v):
+    def validate_compare(cls, v: dict[str, Any]) -> dict[str, Any]:
         if not all(k in v for k in ["left", "operator", "right"]):
             raise ValueError("compare式には 'left', 'operator', 'right' が必要です")
         if v["operator"] not in ["==", "!=", ">", ">=", "<", "<="]:
             raise ValueError(f"無効な演算子です: {v['operator']}")
         return v
 
-    def validate(self, context: ValidationContext, error_message_template: str) -> ValidationResult:
+    def validate_in(self, context: ValidationContext, error_message_template: str) -> ValidationResult:
         """
         比較式のバリデーションを実行する
 
@@ -120,13 +122,13 @@ class CompareExpression(Expression):
             )
 
 
-class RequiredExpression(Expression):
+class RequiredFieldExpression(Expression):
     """必須項目式"""
 
     field: str
     required: bool = True
 
-    def validate(self, context: ValidationContext, error_message_template: str) -> ValidationResult:
+    def validate_in(self, context: ValidationContext, error_message_template: str) -> ValidationResult:
         """
         必須項目のバリデーションを実行する
 
@@ -163,18 +165,7 @@ class RegexMatchExpression(Expression):
 
     regex_match: dict[str, str]
 
-    @field_validator("regex_match")
-    def validate_regex(cls, v):
-        if not all(k in v for k in ["field", "pattern"]):
-            raise ValueError("regex_match式には 'field', 'pattern' が必要です")
-        # 正規表現の有効性を検証
-        try:
-            re.compile(v["pattern"])
-        except re.error:
-            raise ValueError(f"無効な正規表現です: {v['pattern']}")
-        return v
-
-    def validate(self, context: ValidationContext, error_message_template: str) -> ValidationResult:
+    def validate_in(self, context: ValidationContext, error_message_template: str) -> ValidationResult:
         """
         正規表現マッチのバリデーションを実行する
 
@@ -223,15 +214,7 @@ class EnumExpression(Expression):
 
     enum: dict[str, Any]
 
-    @field_validator("enum")
-    def validate_enum(cls, v):
-        if not all(k in v for k in ["field", "values"]):
-            raise ValueError("enum式には 'field', 'values' が必要です")
-        if not isinstance(v["values"], list) or len(v["values"]) == 0:
-            raise ValueError("enum.valuesは少なくとも1つの要素を持つリストである必要があります")
-        return v
-
-    def validate(self, context: ValidationContext, error_message_template: str) -> ValidationResult:
+    def validate_in(self, context: ValidationContext, error_message_template: str) -> ValidationResult:
         """
         列挙型のバリデーションを実行する
 
@@ -266,98 +249,12 @@ class EnumExpression(Expression):
             )
 
 
-# 前方参照で循環参照を解決
-AllOfExpressionRef = ForwardRef("AllOfExpression")
-AnyOfExpressionRef = ForwardRef("AnyOfExpression")
-NotExpressionRef = ForwardRef("NotExpression")
-
-# すべての式型を含むUnion型
-type ExpressionType = (
-    CompareExpression
-    | RequiredExpression
-    | RegexMatchExpression
-    | EnumExpression
-    | AllOfExpressionRef
-    | AnyOfExpressionRef
-    | NotExpressionRef
-)
-
-
-# 式型の検出と変換を行う関数
-def detect_expression_type(data: dict[str, Any]) -> type[Expression]:
-    """
-    辞書データから適切な式の型を検出する
-
-    Args:
-        data: 式データ
-
-    Returns:
-        Expression: 適切な式型のクラス
-    """
-    if "compare" in data:
-        return CompareExpression
-    elif "field" in data and "required" in data:
-        return RequiredExpression
-    elif "regex_match" in data:
-        return RegexMatchExpression
-    elif "enum" in data:
-        return EnumExpression
-    elif "all_of" in data:
-        return AllOfExpression
-    elif "any_of" in data:
-        return AnyOfExpression
-    elif "not" in data:
-        return NotExpression
-    else:
-        # デフォルトまたは不明な型の場合、基底クラスを返すかエラーを発生させるか検討
-        # ここでは基底クラスを返すが、より厳密にするならValueErrorが良いかもしれない
-        # raise ValueError(f"不明な式型です: {data}")
-        return Expression  # または適切なデフォルト処理
-
-
-def convert_expression(data: dict[str, Any] | Expression) -> ExpressionType:
-    """
-    辞書データまたはExpression型のオブジェクトを適切なExpression派生クラスに変換する
-
-    Args:
-        data: 変換対象のデータ
-
-    Returns:
-        ExpressionType: 変換後のExpression派生型オブジェクト
-    """
-    if isinstance(data, Expression):
-        return data
-
-    if isinstance(data, dict):
-        expr_type = detect_expression_type(data)
-        # model_validate を使用して Pydantic モデルに変換
-        return expr_type.model_validate(data)
-
-    raise ValueError(f"無効な式型です: {type(data)}")
-
-
 class AllOfExpression(Expression):
     """全条件一致式"""
 
     all_of: list[ExpressionType]
 
-    @model_validator(mode="before")
-    @classmethod
-    def validate_all_of(cls, data):
-        """すべての条件式を適切な型に変換する"""
-        if isinstance(data, dict) and "all_of" in data:
-            if not data["all_of"] or len(data["all_of"]) == 0:
-                raise ValueError("all_of式には少なくとも1つの条件が必要です")
-
-            # リスト内の各要素を適切な式型に変換
-            converted = []
-            for item in data["all_of"]:
-                converted.append(convert_expression(item))
-            data["all_of"] = converted
-
-        return data
-
-    def validate(self, context: ValidationContext, error_message_template: str) -> ValidationResult:
+    def validate_in(self, context: ValidationContext, error_message_template: str) -> ValidationResult:
         """
         全条件一致のバリデーションを実行する
 
@@ -369,32 +266,32 @@ class AllOfExpression(Expression):
             ValidationResult: バリデーション結果
         """
         # すべての条件を評価
-        results = [expr.validate(context, "") for expr in self.all_of]  # Use a neutral template for sub-expressions
+        results = [expr.validate_in(context, "") for expr in self.all_of]
 
         # すべての条件が有効であれば有効
         if all(r.is_valid for r in results):
             return ValidationResult(is_valid=True)
         else:
             # エラーがあった条件のフィールドと場所を集める
-            all_error_fields = []
-            all_error_locations = []
+            all_error_fields: list[str] = []
+            all_error_locations: list[str] = []
             for _, result in enumerate(results):
                 if not result.is_valid:
                     if result.error_fields:
-                        all_error_fields.extend(result.error_fields)
+                        all_error_fields.extend(f for f in result.error_fields if f is not None)
                     # Add locations based on the fields from the failed sub-expression
                     if result.error_fields:
                         locations = [
                             context.get_field_location(f) for f in result.error_fields if context.get_field_location(f)
                         ]
-                        all_error_locations.extend(locations)
+                        all_error_locations.extend(loc for loc in locations if loc is not None)
                     # Optionally collect sub-messages
                     # if result.error_message:
                     #    sub_error_messages.append(f"Condition {i+1} failed: {result.error_message}")
 
             # 重複を排除
             unique_error_fields = sorted(set(all_error_fields))
-            unique_error_locations = sorted(set(all_error_locations))
+            unique_error_locations = sorted({loc for loc in all_error_locations if loc is not None})
 
             # エラーメッセージのフォーマット (Main message + optional sub-messages)
             msg = error_message_template
@@ -414,23 +311,23 @@ class AnyOfExpression(Expression):
 
     any_of: list[ExpressionType]
 
-    @model_validator(mode="before")
-    @classmethod
-    def validate_any_of(cls, data):
-        """いずれかの条件式を適切な型に変換する"""
-        if isinstance(data, dict) and "any_of" in data:
-            if not data["any_of"] or len(data["any_of"]) == 0:
-                raise ValueError("any_of式には少なくとも1つの条件が必要です")
+    # @model_validator(mode="before")
+    # @classmethod
+    # def validate_any_of(cls, data: dict[str, Any]) -> dict[str, Any]:
+    #     """いずれかの条件式を適切な型に変換する"""
+    #     if isinstance(data, dict) and "any_of" in data:
+    #         if not data["any_of"] or len(data["any_of"]) == 0:
+    #             raise ValueError("any_of式には少なくとも1つの条件が必要です")
 
-            # リスト内の各要素を適切な式型に変換
-            converted = []
-            for item in data["any_of"]:
-                converted.append(convert_expression(item))
-            data["any_of"] = converted
+    #         # リスト内の各要素を適切な式型に変換
+    #         converted = []
+    #         for item in data["any_of"]:
+    #             converted.append(convert_expression(item))
+    #         data["any_of"] = converted
 
-        return data
+    #     return data
 
-    def validate(self, context: ValidationContext, error_message_template: str) -> ValidationResult:
+    def validate_in(self, context: ValidationContext, error_message_template: str) -> ValidationResult:
         """
         いずれかの条件一致のバリデーションを実行する
 
@@ -442,15 +339,15 @@ class AnyOfExpression(Expression):
             ValidationResult: バリデーション結果
         """
         # すべての条件を評価
-        results = [expr.validate(context, "") for expr in self.any_of]
+        results = [expr.validate_in(context, "") for expr in self.any_of]
 
         # いずれかの条件が有効であれば有効
         if any(r.is_valid for r in results):
             return ValidationResult(is_valid=True)
         else:
             # すべての条件が無効の場合、エラーフィールドと場所を集める
-            all_error_fields = []
-            all_error_locations = []
+            all_error_fields: list[str] = []
+            all_error_locations: list[str] = []
             for result in results:
                 if not result.is_valid:
                     if result.error_fields:
@@ -477,16 +374,7 @@ class NotExpression(Expression):
 
     not_: ExpressionType = Field(..., alias="not")
 
-    @model_validator(mode="before")
-    @classmethod
-    def validate_not(cls, data):
-        """否定対象の式を適切な型に変換する"""
-        if isinstance(data, dict) and "not" in data:
-            data["not"] = convert_expression(data["not"])
-
-        return data
-
-    def validate(self, context: ValidationContext, error_message_template: str) -> ValidationResult:
+    def validate_in(self, context: ValidationContext, error_message_template: str) -> ValidationResult:
         """
         否定式のバリデーションを実行する
 
@@ -498,7 +386,7 @@ class NotExpression(Expression):
             ValidationResult: バリデーション結果
         """
         # 内部式を評価
-        result = self.not_.validate(context, "")
+        result = self.not_.validate_in(context, "")
 
         # 内部式の結果を否定
         if not result.is_valid:
@@ -519,7 +407,72 @@ class NotExpression(Expression):
             )
 
 
-# 前方参照の解決
+# すべての式型を含むUnion型
+ExpressionType = Union[
+    CompareExpression,
+    RequiredFieldExpression,
+    RegexMatchExpression,
+    EnumExpression,
+    AllOfExpression,
+    AnyOfExpression,
+    NotExpression,
+]
+
+
+# 式型の検出と変換を行う関数
+def detect_expression_type(data: dict[str, Any]) -> type[Expression]:
+    """
+    辞書データから適切な式の型を検出する
+
+    Args:
+        data: 式データ
+
+    Returns:
+        Expression: 適切な式型のクラス
+    """
+    if "compare" in data:
+        return CompareExpression
+    elif "field" in data and "required" in data:
+        return RequiredFieldExpression
+    elif "regex_match" in data:
+        return RegexMatchExpression
+    elif "enum" in data:
+        return EnumExpression
+    elif "all_of" in data:
+        return AllOfExpression
+    elif "any_of" in data:
+        return AnyOfExpression
+    elif "not" in data:
+        return NotExpression
+    else:
+        # デフォルトまたは不明な型の場合、基底クラスを返すかエラーを発生させるか検討
+        # ここでは基底クラスを返すが、より厳密にするならValueErrorが良いかもしれない
+        # raise ValueError(f"不明な式型です: {data}")
+        return Expression  # または適切なデフォルト処理
+
+
+def convert_expression(data: dict[str, Any] | Expression) -> Expression:
+    """
+    辞書データまたはExpression型のオブジェクトを適切なExpression派生クラスに変換する
+
+    Args:
+        data: 変換対象のデータ
+
+    Returns:
+        Expression: 変換後のExpression派生型オブジェクト
+    """
+    if isinstance(data, Expression):
+        return data
+
+    if isinstance(data, dict):
+        expr_type = detect_expression_type(data)
+        # model_validate を使用して Pydantic モデルに変換
+        return expr_type.model_validate(data)
+
+    raise ValueError(f"無効な式型です: {type(data)}")
+
+
+# すべてのクラス定義後に循環参照を解決するために再構築
 AllOfExpression.model_rebuild()
 AnyOfExpression.model_rebuild()
 NotExpression.model_rebuild()

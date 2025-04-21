@@ -39,7 +39,7 @@ class TestCompareExpression:
     def test_comparison_operators(self, validation_context, left_field, operator, right_value, expected_valid):
         """Test various comparison operators with different values."""
         expr = CompareExpression(compare={"left": left_field, "operator": operator, "right": right_value})
-        result = expr.validate(validation_context, "{left_field} {operator} {right_value} の比較が失敗しました")
+        result = expr.validate_in(validation_context, "{left_field} {operator} {right_value} の比較が失敗しました")
         assert result.is_valid == expected_valid
         if not expected_valid:
             assert result.error_fields == [left_field]
@@ -47,6 +47,6 @@ class TestCompareExpression:
     def test_invalid_comparison_type_error(self, validation_context):
         """Test comparison that raises TypeError (e.g., comparing number and string)."""
         expr = CompareExpression(compare={"left": "age", "operator": ">", "right": "text"})
-        result = expr.validate(validation_context, "比較エラー")
+        result = expr.validate_in(validation_context, "比較エラー")
         assert not result.is_valid
         assert result.error_fields == ["age"]
