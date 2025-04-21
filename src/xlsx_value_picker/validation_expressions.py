@@ -6,9 +6,9 @@ from __future__ import annotations
 
 import re
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 
 # validation_common から必要なクラスをインポート
 from .validation_common import ValidationContext, ValidationResult
@@ -53,18 +53,18 @@ class Expression(BaseModel, IExpression):
         return ValidationResult(is_valid=True)
 
 
+class CompareExpressionParams(BaseModel):
+    """比較式のパラメータを定義するクラス"""
+
+    left: str | int | float | bool | None
+    operator: Literal["==", "!=", ">", ">=", "<", "<="]
+    right: str | int | float | bool | None
+
+
 class CompareExpression(Expression):
     """比較式"""
 
-    compare: dict[str, Any]
-
-    @field_validator("compare")
-    def validate_compare(cls, v: dict[str, Any]) -> dict[str, Any]:
-        if not all(k in v for k in ["left", "operator", "right"]):
-            raise ValueError("compare式には 'left', 'operator', 'right' が必要です")
-        if v["operator"] not in ["==", "!=", ">", ">=", "<", "<="]:
-            raise ValueError(f"無効な演算子です: {v['operator']}")
-        return v
+    compare: CompareExpressionParams
 
     def validate_in(self, context: ValidationContext, error_message_template: str) -> ValidationResult:
         """
@@ -77,10 +77,10 @@ class CompareExpression(Expression):
         Returns:
             ValidationResult: バリデーション結果
         """
-        left_field = self.compare["left"]
-        operator = self.compare["operator"]
-        right_value = self.compare["right"]
-        left_value = context.get_field_value(left_field)
+        left_field = self.compare.left
+        operator = self.compare.operator
+        right_value = self.compare.right
+        left_value = context.get_field_value(left_field) if isinstance(left_field, str) else left_field
 
         # 比較ロジック
         is_valid = False
@@ -89,13 +89,13 @@ class CompareExpression(Expression):
                 is_valid = left_value == right_value
             elif operator == "!=":
                 is_valid = left_value != right_value
-            elif operator == ">":
+            elif operator == ">" and left_value is not None and right_value is not None :
                 is_valid = left_value > right_value
-            elif operator == ">=":
+            elif operator == ">=" and left_value is not None and right_value is not None :
                 is_valid = left_value >= right_value
-            elif operator == "<":
+            elif operator == "<" and left_value is not None and right_value is not None :
                 is_valid = left_value < right_value
-            elif operator == "<=":
+            elif operator == "<=" and left_value is not None and right_value is not None :
                 is_valid = left_value <= right_value
         except (TypeError, ValueError):
             # 型が異なる場合や比較不能な場合は無効とする
