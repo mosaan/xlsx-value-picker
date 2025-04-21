@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import re
 from abc import ABC, abstractmethod
-from typing import Any, Union
+from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -408,15 +408,15 @@ class NotExpression(Expression):
 
 
 # すべての式型を含むUnion型
-ExpressionType = Union[
-    CompareExpression,
-    RequiredFieldExpression,
-    RegexMatchExpression,
-    EnumExpression,
-    AllOfExpression,
-    AnyOfExpression,
-    NotExpression,
-]
+type ExpressionType = (
+    CompareExpression
+    | RequiredFieldExpression
+    | RegexMatchExpression
+    | EnumExpression
+    | AllOfExpression
+    | AnyOfExpression
+    | NotExpression
+)
 
 
 # 式型の検出と変換を行う関数
