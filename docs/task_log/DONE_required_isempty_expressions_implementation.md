@@ -120,6 +120,17 @@
   - test_cli_basic.py の修正完了
   - test_cli_validation.py の修正完了
 
+### 2024-04-21: 完了報告
+
+- 残りのCLIテストファイルの修正完了（test_cli_options.py）
+- すべてのテスト（116件）を実行し、全テストが成功することを確認
+- 以下のドキュメントを新しい実装に合わせて更新：
+  - `docs/spec/rule-schema.json`: RequiredExpressionの定義を新形式に更新し、IsEmptyExpressionの定義を追加
+  - `docs/design/validation-design.md`: RequiredExpressionクラスの説明と実装例を更新し、IsEmptyExpressionの説明を追加
+  - `README.md`: バリデーション機能の説明と例を新形式に更新し、IsEmptyExpressionの説明も追加
+
+これですべての完了条件を満たしたため、タスクを完了としました。
+
 ### 次のステップ
 
 - 残りのCLIテストファイルの修正（test_cli_options.py など）
