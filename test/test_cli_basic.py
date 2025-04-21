@@ -253,10 +253,10 @@ class TestCLIBasic:
         """有効なYAML設定ファイルでの実行テスト"""
         excel_path = setup_files["excel_path"]
         yaml_config_path = setup_files["yaml_config_path"]
-        schema_path = setup_files["schema_path"]  # スキーマを明示的に指定
+        # schema_path = setup_files["schema_path"] # 削除
 
         result = self.run_cli_command(
-            [str(excel_path), "--config", str(yaml_config_path), "--schema", str(schema_path)]
+            [str(excel_path), "--config", str(yaml_config_path)] # --schema を削除
         )
 
         # 終了コードが0（正常終了）
@@ -275,10 +275,10 @@ class TestCLIBasic:
         """有効なJSON設定ファイルでの実行テスト"""
         excel_path = setup_files["excel_path"]
         json_config_path = setup_files["json_config_path"]
-        schema_path = setup_files["schema_path"]  # スキーマを明示的に指定
+        # schema_path = setup_files["schema_path"] # 削除
 
         result = self.run_cli_command(
-            [str(excel_path), "--config", str(json_config_path), "--schema", str(schema_path)]
+            [str(excel_path), "--config", str(json_config_path)] # --schema を削除
         )
 
         # 終了コードが0（正常終了）
@@ -298,14 +298,13 @@ class TestCLIBasic:
         yaml_config_path = setup_files["yaml_config_path"]
         output_path = tmp_path / "output.json"
 
-        schema_path = setup_files["schema_path"]  # スキーマを明示的に指定
+        # schema_path = setup_files["schema_path"] # 削除
         result = self.run_cli_command(
             [
                 str(excel_path),
                 "--config",
                 str(yaml_config_path),
-                "--schema",
-                str(schema_path),
+                # "--schema", str(schema_path), # 削除
                 "--output",
                 str(output_path),
             ]
@@ -327,10 +326,10 @@ class TestCLIBasic:
         """標準出力オプションでの実行テスト（明示的に指定なし）"""
         excel_path = setup_files["excel_path"]
         yaml_config_path = setup_files["yaml_config_path"]
-        schema_path = setup_files["schema_path"]  # スキーマを明示的に指定
+        # schema_path = setup_files["schema_path"] # 削除
 
         result = self.run_cli_command(
-            [str(excel_path), "--config", str(yaml_config_path), "--schema", str(schema_path)]
+            [str(excel_path), "--config", str(yaml_config_path)] # --schema を削除
         )
 
         # 終了コードが0（正常終了）

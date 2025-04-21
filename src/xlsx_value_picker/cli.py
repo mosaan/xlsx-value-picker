@@ -2,7 +2,7 @@ import json
 import sys
 from typing import Any
 
-import click
+import click  # type: ignore
 
 from .config_loader import ConfigLoader, ConfigModel, OutputFormat
 from .excel_processor import ExcelValueExtractor
@@ -14,10 +14,11 @@ from .exceptions import (
     XlsxValuePickerError,
 )
 from .output_formatter import OutputFormatter
-from .validation import ValidationEngine, ValidationResult
+from .validation import ValidationEngine
+from .validation_common import ValidationResult # インポート元を修正
 
 
-def _handle_error(e: Exception, ignore_errors: bool, message_prefix: str = "エラーが発生しました"):
+def _handle_error(e: Exception, ignore_errors: bool, message_prefix: str = "エラーが発生しました") -> None: # 戻り値型を追加
     """共通のエラーハンドリング処理"""
     click.echo(f"{message_prefix}: {e}", err=True)
     if not ignore_errors:
@@ -26,7 +27,7 @@ def _handle_error(e: Exception, ignore_errors: bool, message_prefix: str = "エ�
         click.echo("--ignore-errors オプションが指定されたため、処理を継続します", err=True)
 
 
-def _write_validation_log(log_path: str, validation_results: list[ValidationResult]):
+def _write_validation_log(log_path: str, validation_results: list[ValidationResult]) -> None: # 戻り値型を追加
     """バリデーション結果をログファイルに書き込む"""
     try:
         with open(log_path, "w", encoding="utf-8") as f:
@@ -54,26 +55,26 @@ def _write_validation_log(log_path: str, validation_results: list[ValidationResu
         click.echo(f"ログ出力に失敗しました: {e}", err=True)
 
 
-@click.command()
-@click.argument("excel_file", type=click.Path(exists=True, file_okay=True, dir_okay=False))
-@click.option("-c", "--config", default="config.yaml", help="検証ルールや設定を記述した設定ファイル")
-@click.option("--ignore-errors", is_flag=True, help="検証エラーが発生しても処理を継続します")
-@click.option("-o", "--output", help="出力先ファイルを指定します（未指定の場合は標準出力）")
-@click.option("--log", help="検証エラーを記録するログファイルを指定します")
-@click.option("--schema", help="JSONスキーマファイルのパスを指定します")
-@click.option("--include-empty-cells", is_flag=True, help="空セルも出力に含めます")
-@click.option("--validate-only", is_flag=True, help="バリデーションのみを実行します")
-@click.version_option(version="0.3.0")
-def main(
+@click.command()  # type: ignore
+@click.argument("excel_file", type=click.Path(exists=True, file_okay=True, dir_okay=False))  # type: ignore
+@click.option("-c", "--config", default="config.yaml", help="検証ルールや設定を記述した設定ファイル")  # type: ignore
+@click.option("--ignore-errors", is_flag=True, help="検証エラーが発生しても処理を継続します")  # type: ignore
+@click.option("-o", "--output", help="出力先ファイルを指定します（未指定の場合は標準出力）")  # type: ignore
+@click.option("--log", help="検証エラーを記録するログファイルを指定します")  # type: ignore
+# --schema オプションは削除 (スキーマ検証は Pydantic に一本化)
+@click.option("--include-empty-cells", is_flag=True, help="空セルも出力に含めます")  # type: ignore
+@click.option("--validate-only", is_flag=True, help="バリデーションのみを実行します")  # type: ignore
+@click.version_option(version="0.3.0")  # type: ignore
+def main( # 戻り値型を追加
     excel_file: str,
     config: str,
     ignore_errors: bool,
     output: str | None,
     log: str | None,
-    schema: str | None,
+    # schema 引数は削除
     include_empty_cells: bool,
     validate_only: bool,
-):
+) -> None:
     """
     Excelファイルから値を取得し、バリデーションと出力を行うツール
 
@@ -88,15 +89,14 @@ def main(
     try:
         # 1. ConfigLoader の初期化 (スキーマ読み込み)
         try:
-            config_loader = ConfigLoader(schema_path=schema)
-        except ConfigLoadError as e:
-            # スキーマ読み込みエラーは ignore_errors の影響を受けずに常にエラー終了させる
-            # (スキーマがないと最低限の動作も保証できないため)
-            click.echo(f"スキーマファイルの読み込みに失敗しました: {e}", err=True)
-            sys.exit(1)
-        except Exception as e:  # 予期せぬ初期化エラー
+            # ConfigLoader の初期化 (引数なしに変更)
+            config_loader = ConfigLoader()
+        # except ConfigLoadError as e: # スキーマ読み込み固有のエラーハンドリングは削除
+        #     click.echo(f"スキーマファイルの読み込みに失敗しました: {e}", err=True)
+        #     sys.exit(1)
+        except Exception as e:  # ConfigLoader 初期化時の予期せぬエラー
             click.echo(f"ConfigLoader の初期化中に予期せぬエラーが発生しました: {e}", err=True)
-            sys.exit(1)
+            sys.exit(1) # 初期化失敗は致命的なので終了
 
         # 2. 設定ファイルの読み込みと検証
         try:
@@ -234,6 +234,7 @@ def load_config(config_path: str) -> dict[str, Any]:
     """
     # この関数はテスト用なので、リファクタリング対象外とする
     # 必要であれば別途修正
+    # ConfigLoader の初期化 (引数なしに変更)
     config_loader = ConfigLoader()
     try:
         return config_loader.load_config(config_path).model_dump()

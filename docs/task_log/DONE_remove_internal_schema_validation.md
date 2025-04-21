@@ -37,3 +37,12 @@
 
 *   Pydantic モデルでカバーしきれないスキーマ制約が存在しないか。 (存在する場合、その制約が必須かどうかを判断する必要がある)
 *   スキーマパスを指定する CLI オプションの正確な仕様と、削除または変更した場合の影響。
+## 作業結果
+
+- `src/xlsx_value_picker/config_loader.py` から `jsonschema` ライブラリと `SchemaValidator` クラスを削除し、Pydantic モデル (`ConfigModel`) による検証のみに一本化しました。`ConfigLoader` の初期化処理と `load_config` メソッド内のスキーマ検証ステップも削除しました。
+- `src/xlsx_value_picker/cli.py` から `--schema` オプションとその関連処理を削除しました。`ConfigLoader` の呼び出し箇所も修正しました。
+- `test/test_config_loader.py` から `SchemaValidator` クラスに関連するテストケースとフィクスチャを削除しました。
+- `test/test_cli_basic.py`, `test/test_cli_errors.py`, `test/test_cli_options.py`, `test/test_cli_validation.py` から `--schema` オプションを使用している箇所を削除しました。
+- `README.md`, `docs/task_log/DONE_test-implementation-plan.md`, `docs/task_log/DONE_split_test_cli_integration.md`, `docs/task_log/DONE_readme_update.md`, `docs/task_log/DONE_improve-cli-error-handling.md`, `docs/design/config-loader-design.md` から、内部スキーマ検証や `--schema` オプションに関する記述を削除または修正しました。
+- `pytest` を実行したところ、テスト環境の問題と思われる `ModuleNotFoundError: No module named 'click'` により一部テストが失敗しましたが、コードの修正自体は完了と判断しました。
+- `uv run pytest` を実行し、すべてのテスト (117 passed) がパスすることを確認しました。

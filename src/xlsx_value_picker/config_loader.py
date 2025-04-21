@@ -7,7 +7,6 @@ import os
 from pathlib import Path  # pathlib をインポート
 from typing import Any, ClassVar
 
-import jsonschema
 import yaml
 from pydantic import BaseModel, Field, field_validator, model_validator
 from pydantic import ValidationError as PydanticValidationError
@@ -54,54 +53,8 @@ class ConfigParser:
             raise ConfigLoadError(f"設定ファイルの読み込み中に予期せぬエラーが発生しました: {file_path} - {e}")
 
 
-class SchemaValidator:
-    """JSONスキーマバリデーター"""
-
-    def __init__(self, schema_path: str):
-        """
-        スキーマファイルを読み込む
-
-        Args:
-            schema_path: JSONスキーマファイルのパス
-
-        Raises:
-            ConfigLoadError: スキーマファイルが見つからない、またはJSONとして不正な場合
-        """
-        if not os.path.exists(schema_path):
-            # FileNotFoundError の代わりに ConfigLoadError を送出
-            raise ConfigLoadError(f"スキーマファイルが見つかりません: {schema_path}")
-
-        try:
-            with open(schema_path, encoding="utf-8") as f:
-                self.schema = json.load(f)
-        except json.JSONDecodeError as e:
-            raise ConfigLoadError(f"スキーマファイルのJSON形式が不正です: {schema_path} - {e}")
-        except Exception as e:
-            raise ConfigLoadError(f"スキーマファイルの読み込み中に予期せぬエラーが発生しました: {schema_path} - {e}")
-
-    def validate(self, config_data: dict) -> None:
-        """
-        設定データをスキーマに基づいて検証する
-
-        Args:
-            config_data: 検証対象の設定データ
-
-        Raises:
-            ConfigValidationError: バリデーションに失敗した場合
-        """
-        try:
-            jsonschema.validate(instance=config_data, schema=self.schema)
-        except jsonschema.exceptions.ValidationError as e:
-            path = ".".join(str(p) for p in e.path) if e.path else "root"
-            # ConfigValidationError を使用
-            raise ConfigValidationError(f"設定ファイルのスキーマ検証に失敗しました: {path} - {e.message}")
-        except Exception as e:  # jsonschema の予期せぬエラー
-            raise ConfigValidationError(f"スキーマ検証中に予期せぬエラーが発生しました: {e}")
-
-
+# SchemaValidator クラスは削除 (JSONスキーマ検証は Pydantic に一本化)
 # バリデーション式関連のコードは validation_expressions.py に移動済み
-
-
 class Rule(BaseModel):
     """バリデーションルール"""
 
@@ -197,31 +150,15 @@ class ConfigModel(BaseModel):
 class ConfigLoader:
     """設定ファイルローダー"""
 
-    # 修正: デフォルトスキーマパスの計算方法を変更
-    _BASE_DIR = Path(__file__).resolve().parent.parent  # src ディレクトリを基準とする
-    DEFAULT_SCHEMA_PATH: ClassVar[str] = str(
-        _BASE_DIR.parent / "docs" / "spec" / "rule-schema.json"  # プロジェクトルートからの相対パス
-    )
+    # DEFAULT_SCHEMA_PATH は不要なため削除
 
-    def __init__(self, schema_path: str = None):
+    def __init__(self):
         """
         初期化
-
-        Args:
-            schema_path: JSONスキーマファイルのパス（None の場合はデフォルトパスを使用）
-
-        Raises:
-            ConfigLoadError: スキーマファイルの読み込みに失敗した場合
+        (スキーマ検証を行わないため、引数は不要)
         """
-        self.schema_path = schema_path or self.DEFAULT_SCHEMA_PATH
-        # print(f"DEBUG: Using schema path: {self.schema_path}") # デバッグ用
-        try:
-            self.validator = SchemaValidator(self.schema_path)
-        except ConfigLoadError as e:  # SchemaValidator からの ConfigLoadError をキャッチ
-            # __init__ で発生したエラーはそのまま送出
-            raise e
-        except Exception as e:  # 予期せぬエラー
-            raise ConfigLoadError(f"スキーマバリデーターの初期化中にエラーが発生しました: {e}")
+        # スキーマバリデーターの初期化は不要
+        pass
 
     def load_config(self, config_path: str) -> ConfigModel:
         """
@@ -241,8 +178,7 @@ class ConfigLoader:
             # 設定ファイルのパース (ConfigLoadError が発生する可能性)
             config_data = ConfigParser.parse_file(config_path)
 
-            # JSONスキーマによる検証 (ConfigValidationError が発生する可能性)
-            self.validator.validate(config_data)
+            # JSONスキーマによる検証は削除
 
             # モデルオブジェクトの生成 (PydanticValidationError が発生する可能性)
             model = ConfigModel.model_validate(config_data)
@@ -251,9 +187,8 @@ class ConfigLoader:
         except ConfigLoadError as e:
             # パース時のエラーはそのまま ConfigLoadError として送出
             raise e
-        except ConfigValidationError as e:
-            # スキーマ検証時のエラーはそのまま ConfigValidationError として送出
-            raise e
+        # except ConfigValidationError as e: # スキーマ検証のエラーハンドリングは削除
+        #     raise e
         except PydanticValidationError as e:
             # Pydantic のバリデーションエラーを ConfigValidationError にラップして送出
             # エラーメッセージを整形して分かりやすくする

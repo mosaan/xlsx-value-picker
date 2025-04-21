@@ -13,13 +13,13 @@ from pydantic import ValidationError as PydanticValidationError  # PydanticValid
 # テスト対象モジュールへのパスを追加
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from xlsx_value_picker.config_loader import (
+from xlsx_value_picker.config_loader import ( # SchemaValidator を削除
     ConfigLoader,
     ConfigModel,
     ConfigParser,
     OutputFormat,
     Rule,
-    SchemaValidator,
+    # SchemaValidator, # 削除
 )
 from xlsx_value_picker.exceptions import ConfigLoadError, ConfigValidationError
 from xlsx_value_picker.validation_expressions import (
@@ -123,62 +123,7 @@ class TestConfigParser:
         assert "サポートされていないファイル形式です" in str(excinfo.value)
 
 
-class TestSchemaValidator:
-    """SchemaValidatorクラスのテスト"""
-
-    @pytest.fixture
-    def valid_schema_file(self, tmp_path):
-        """有効なスキーマファイルを作成してパスを返す"""
-        schema_path = tmp_path / "valid_schema.json"
-        create_valid_schema(schema_path)
-        return str(schema_path)
-
-    @pytest.fixture
-    def invalid_schema_file(self, tmp_path):
-        """無効なスキーマファイルを作成してパスを返す"""
-        schema_path = tmp_path / "invalid_schema.json"
-        create_invalid_schema(schema_path)
-        return str(schema_path)
-
-    def test_init_valid_schema(self, valid_schema_file):
-        """有効なスキーマファイルで初期化できることをテスト"""
-        try:
-            validator = SchemaValidator(valid_schema_file)
-            assert validator.schema is not None
-        except Exception as e:
-            pytest.fail(f"初期化に失敗しました: {e}")
-
-    def test_init_invalid_schema(self, invalid_schema_file):
-        """無効なスキーマファイルで初期化するとConfigLoadErrorが発生することをテスト"""
-        with pytest.raises(ConfigLoadError) as excinfo:
-            SchemaValidator(invalid_schema_file)
-        assert "スキーマファイルのJSON形式が不正です" in str(excinfo.value)
-
-    def test_nonexistent_schema_file(self):
-        """存在しないスキーマファイルを指定するとConfigLoadErrorが発生することをテスト"""
-        with pytest.raises(ConfigLoadError) as excinfo:
-            SchemaValidator("nonexistent_schema.json")
-        assert "スキーマファイルが見つかりません" in str(excinfo.value)
-
-    def test_validate_success(self, valid_schema_file):
-        """スキーマに準拠したデータがバリデーションを通過することをテスト"""
-        validator = SchemaValidator(valid_schema_file)
-        valid_data = {"fields": {"key": "Sheet1!A1"}, "rules": [], "output": {"format": "json"}}
-        try:
-            validator.validate(valid_data)
-        except ConfigValidationError as e:
-            pytest.fail(f"バリデーションに失敗しました: {e}")
-
-    def test_validate_failure(self, valid_schema_file):
-        """スキーマに準拠しないデータでConfigValidationErrorが発生することをテスト"""
-        validator = SchemaValidator(valid_schema_file)
-        invalid_data = {"fields": {"key": "Sheet1!A1"}, "rules": []}  # output がない
-        with pytest.raises(ConfigValidationError) as excinfo:
-            validator.validate(invalid_data)
-        assert "設定ファイルのスキーマ検証に失敗しました" in str(excinfo.value)
-        assert "'output' is a required property" in str(excinfo.value)
-
-
+# TestSchemaValidator クラス全体を削除 (スキーマ検証は Pydantic に一本化)
 class TestPydanticModels:
     """Pydanticモデルのテスト"""
 
@@ -286,16 +231,12 @@ class TestConfigLoader:
             yaml.dump(data, f)
         return str(config_path)
 
-    @pytest.fixture
-    def valid_schema_file(self, tmp_path):
-        """有効なスキーマファイルを作成してパスを返す"""
-        schema_path = tmp_path / "valid_schema.json"
-        create_valid_schema(schema_path)
-        return str(schema_path)
+    # valid_schema_file フィクスチャは不要なため削除
 
-    def test_load_config_success(self, valid_config_file, valid_schema_file):
+    def test_load_config_success(self, valid_config_file): # valid_schema_file 引数を削除
         """有効な設定ファイルを正しく読み込めることをテスト"""
-        loader = ConfigLoader(schema_path=valid_schema_file)
+        # ConfigLoader の初期化から schema_path を削除
+        loader = ConfigLoader()
         try:
             model = loader.load_config(valid_config_file)
             assert isinstance(model, ConfigModel)
@@ -303,21 +244,17 @@ class TestConfigLoader:
         except (ConfigLoadError, ConfigValidationError) as e:
             pytest.fail(f"設定の読み込みに失敗しました: {e}")
 
-    def test_load_config_file_not_found(self, valid_schema_file):
+    def test_load_config_file_not_found(self): # valid_schema_file 引数を削除
         """存在しない設定ファイルを指定するとConfigLoadErrorが発生することをテスト"""
-        loader = ConfigLoader(schema_path=valid_schema_file)
+        # ConfigLoader の初期化から schema_path を削除
+        loader = ConfigLoader()
         with pytest.raises(ConfigLoadError) as excinfo:
             loader.load_config("nonexistent_config.yaml")
         assert "設定ファイルが見つかりません" in str(excinfo.value)
 
-    def test_load_config_schema_validation_error(self, invalid_config_file, valid_schema_file):
-        """スキーマ違反の設定ファイルを指定するとConfigValidationErrorが発生することをテスト"""
-        loader = ConfigLoader(schema_path=valid_schema_file)
-        with pytest.raises(ConfigValidationError) as excinfo:
-            loader.load_config(invalid_config_file)
-        assert "設定ファイルのスキーマ検証に失敗しました" in str(excinfo.value)
+    # test_load_config_schema_validation_error は削除 (スキーマ検証は行わない)
 
-    def test_load_config_model_validation_error(self, tmp_path, valid_schema_file):
+    def test_load_config_model_validation_error(self, tmp_path): # valid_schema_file 引数を削除
         """モデル検証エラーが発生する設定ファイルを指定するとConfigValidationErrorが発生することをテスト"""
         # モデル検証エラー (fields が空)
         config_path = tmp_path / "model_error.yaml"
@@ -325,32 +262,12 @@ class TestConfigLoader:
         with open(config_path, "w", encoding="utf-8") as f:
             yaml.dump(data, f)
 
-        loader = ConfigLoader(schema_path=valid_schema_file)
+        # ConfigLoader の初期化から schema_path を削除
+        loader = ConfigLoader()
         with pytest.raises(ConfigValidationError) as excinfo:
             loader.load_config(str(config_path))
         assert "設定ファイルのモデル検証に失敗しました" in str(excinfo.value)
         # assert "少なくとも1つのフィールド定義が必要" in str(excinfo.value) # Pydantic V2 の詳細メッセージを確認
         assert "Value error, 少なくとも1つのフィールド定義が必要です" in str(excinfo.value)
 
-    def test_load_config_default_schema(self, valid_config_file, monkeypatch):
-        """デフォルトスキーマパスが使用されることをテスト"""
-        # デフォルトスキーマパスが存在するように見せかける
-        default_path = ConfigLoader.DEFAULT_SCHEMA_PATH
-        Path(default_path).parent.mkdir(parents=True, exist_ok=True)
-        # デフォルトパスに有効なスキーマファイルを作成
-        create_valid_schema(default_path)
-
-        loader = ConfigLoader()  # schema_path を指定しない
-        try:
-            loader.load_config(valid_config_file)
-        except (ConfigLoadError, ConfigValidationError) as e:
-            pytest.fail(f"デフォルトスキーマでの読み込みに失敗しました: {e}")
-        finally:
-            # 作成したダミースキーマを削除
-            if Path(default_path).exists():
-                Path(default_path).unlink()
-            # 作成したディレクトリも削除 (空の場合)
-            try:
-                Path(default_path).parent.rmdir()
-            except OSError:
-                pass  # 空でない場合は無視
+    # test_load_config_default_schema は削除 (スキーマパスの概念がなくなったため)
