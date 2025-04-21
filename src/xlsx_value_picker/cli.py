@@ -15,10 +15,12 @@ from .exceptions import (
 )
 from .output_formatter import OutputFormatter
 from .validation import ValidationEngine
-from .validation_common import ValidationResult # インポート元を修正
+from .validation_common import ValidationResult  # インポート元を修正
 
 
-def _handle_error(e: Exception, ignore_errors: bool, message_prefix: str = "エラーが発生しました") -> None: # 戻り値型を追加
+def _handle_error(
+    e: Exception, ignore_errors: bool, message_prefix: str = "エラーが発生しました"
+) -> None:  # 戻り値型を追加
     """共通のエラーハンドリング処理"""
     click.echo(f"{message_prefix}: {e}", err=True)
     if not ignore_errors:
@@ -27,7 +29,7 @@ def _handle_error(e: Exception, ignore_errors: bool, message_prefix: str = "エ�
         click.echo("--ignore-errors オプションが指定されたため、処理を継続します", err=True)
 
 
-def _write_validation_log(log_path: str, validation_results: list[ValidationResult]) -> None: # 戻り値型を追加
+def _write_validation_log(log_path: str, validation_results: list[ValidationResult]) -> None:  # 戻り値型を追加
     """バリデーション結果をログファイルに書き込む"""
     try:
         with open(log_path, "w", encoding="utf-8") as f:
@@ -65,7 +67,7 @@ def _write_validation_log(log_path: str, validation_results: list[ValidationResu
 @click.option("--include-empty-cells", is_flag=True, help="空セルも出力に含めます")  # type: ignore
 @click.option("--validate-only", is_flag=True, help="バリデーションのみを実行します")  # type: ignore
 @click.version_option(version="0.3.0")  # type: ignore
-def main( # 戻り値型を追加
+def main(  # 戻り値型を追加
     excel_file: str,
     config: str,
     ignore_errors: bool,
@@ -96,7 +98,7 @@ def main( # 戻り値型を追加
         #     sys.exit(1)
         except Exception as e:  # ConfigLoader 初期化時の予期せぬエラー
             click.echo(f"ConfigLoader の初期化中に予期せぬエラーが発生しました: {e}", err=True)
-            sys.exit(1) # 初期化失敗は致命的なので終了
+            sys.exit(1)  # 初期化失敗は致命的なので終了
 
         # 2. 設定ファイルの読み込みと検証
         try:

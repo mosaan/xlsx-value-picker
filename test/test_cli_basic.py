@@ -256,7 +256,7 @@ class TestCLIBasic:
         # schema_path = setup_files["schema_path"] # 削除
 
         result = self.run_cli_command(
-            [str(excel_path), "--config", str(yaml_config_path)] # --schema を削除
+            [str(excel_path), "--config", str(yaml_config_path)]  # --schema を削除
         )
 
         # 終了コードが0（正常終了）
@@ -278,7 +278,7 @@ class TestCLIBasic:
         # schema_path = setup_files["schema_path"] # 削除
 
         result = self.run_cli_command(
-            [str(excel_path), "--config", str(json_config_path)] # --schema を削除
+            [str(excel_path), "--config", str(json_config_path)]  # --schema を削除
         )
 
         # 終了コードが0（正常終了）
@@ -329,7 +329,7 @@ class TestCLIBasic:
         # schema_path = setup_files["schema_path"] # 削除
 
         result = self.run_cli_command(
-            [str(excel_path), "--config", str(yaml_config_path)] # --schema を削除
+            [str(excel_path), "--config", str(yaml_config_path)]  # --schema を削除
         )
 
         # 終了コードが0（正常終了）

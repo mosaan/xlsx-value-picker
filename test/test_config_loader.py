@@ -13,7 +13,7 @@ from pydantic import ValidationError as PydanticValidationError  # PydanticValid
 # テスト対象モジュールへのパスを追加
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from xlsx_value_picker.config_loader import ( # SchemaValidator を削除
+from xlsx_value_picker.config_loader import (  # SchemaValidator を削除
     ConfigLoader,
     ConfigModel,
     ConfigParser,
@@ -233,7 +233,7 @@ class TestConfigLoader:
 
     # valid_schema_file フィクスチャは不要なため削除
 
-    def test_load_config_success(self, valid_config_file): # valid_schema_file 引数を削除
+    def test_load_config_success(self, valid_config_file):  # valid_schema_file 引数を削除
         """有効な設定ファイルを正しく読み込めることをテスト"""
         # ConfigLoader の初期化から schema_path を削除
         loader = ConfigLoader()
@@ -244,7 +244,7 @@ class TestConfigLoader:
         except (ConfigLoadError, ConfigValidationError) as e:
             pytest.fail(f"設定の読み込みに失敗しました: {e}")
 
-    def test_load_config_file_not_found(self): # valid_schema_file 引数を削除
+    def test_load_config_file_not_found(self):  # valid_schema_file 引数を削除
         """存在しない設定ファイルを指定するとConfigLoadErrorが発生することをテスト"""
         # ConfigLoader の初期化から schema_path を削除
         loader = ConfigLoader()
@@ -254,7 +254,7 @@ class TestConfigLoader:
 
     # test_load_config_schema_validation_error は削除 (スキーマ検証は行わない)
 
-    def test_load_config_model_validation_error(self, tmp_path): # valid_schema_file 引数を削除
+    def test_load_config_model_validation_error(self, tmp_path):  # valid_schema_file 引数を削除
         """モデル検証エラーが発生する設定ファイルを指定するとConfigValidationErrorが発生することをテスト"""
         # モデル検証エラー (fields が空)
         config_path = tmp_path / "model_error.yaml"

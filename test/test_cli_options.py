@@ -256,7 +256,7 @@ class TestCLIOptions:
         # schema_path = setup_files["schema_path"] # 削除済み
 
         result = self.run_cli_command(
-            [str(excel_path), "--config", str(yaml_config_path)] # --schema 削除済み
+            [str(excel_path), "--config", str(yaml_config_path)]  # --schema 削除済み
         )
 
         # 終了コードが0（正常終了）
@@ -286,7 +286,7 @@ class TestCLIOptions:
 
         # schema_path = setup_files["schema_path"] # 削除済み
         # 空セル含めないオプションなし実行
-        result1 = self.run_cli_command([str(excel_path), "--config", str(config_path)]) # --schema 削除済み
+        result1 = self.run_cli_command([str(excel_path), "--config", str(config_path)])  # --schema 削除済み
 
         # 終了コードが0（正常終了）
         assert result1.returncode == 0
@@ -297,7 +297,7 @@ class TestCLIOptions:
 
         # 空セル含むオプション実行
         result2 = self.run_cli_command(
-            [str(excel_path), "--config", str(config_path), "--include-empty-cells"] # --schema を削除
+            [str(excel_path), "--config", str(config_path), "--include-empty-cells"]  # --schema を削除
         )
 
         # 終了コードが0（正常終了）
@@ -316,7 +316,7 @@ class TestCLIOptions:
 
         # 無効な設定ファイルでエラー無視なしの場合
         result1 = self.run_cli_command(
-            [str(excel_path), "--config", str(invalid_config_path)] # --schema 削除済み
+            [str(excel_path), "--config", str(invalid_config_path)]  # --schema 削除済み
         )
 
         # 終了コードが1（エラー終了）
@@ -326,7 +326,7 @@ class TestCLIOptions:
 
         # 無効な設定ファイルでエラー無視ありの場合
         result2 = self.run_cli_command(
-            [str(excel_path), "--config", str(invalid_config_path), "--ignore-errors"] # --schema 削除済み
+            [str(excel_path), "--config", str(invalid_config_path), "--ignore-errors"]  # --schema 削除済み
         )
 
         # エラーメッセージは出るが終了コードは0（正常終了）

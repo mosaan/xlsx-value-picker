@@ -4,8 +4,7 @@ JSONスキーマに基づく設定データ読み込み機能
 
 import json
 import os
-from pathlib import Path  # pathlib をインポート
-from typing import Any, ClassVar
+from typing import Any
 
 import yaml
 from pydantic import BaseModel, Field, field_validator, model_validator

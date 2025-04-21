@@ -5,7 +5,6 @@
 検証するための機能を提供します。
 """
 
-
 # config_loader ではなく validation_common からクラスをインポート
 # 前方参照型を使ってRuleをインポート
 from typing import TYPE_CHECKING

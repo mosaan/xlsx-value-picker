@@ -256,7 +256,7 @@ class TestCLIErrors:
         # schema_path = setup_files["schema_path"] # 削除
 
         result = self.run_cli_command(
-            [str(excel_path), "--config", str(invalid_config_path)] # --schema を削除
+            [str(excel_path), "--config", str(invalid_config_path)]  # --schema を削除
         )
 
         # 終了コードが1（エラー終了）
@@ -284,7 +284,7 @@ class TestCLIErrors:
         # schema_path = setup_files["schema_path"] # 削除
 
         result = self.run_cli_command(
-            [str(excel_path), "--config", "nonexistent_config.yaml"] # --schema を削除
+            [str(excel_path), "--config", "nonexistent_config.yaml"]  # --schema を削除
         )
 
         # 終了コードが1（エラー終了）

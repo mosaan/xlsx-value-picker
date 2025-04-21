@@ -256,7 +256,7 @@ class TestCLIValidation:
         # schema_path = setup_files["schema_path"] # 削除
 
         result = self.run_cli_command(
-            [str(excel_path), "--config", str(validation_config_path)] # --schema を削除
+            [str(excel_path), "--config", str(validation_config_path)]  # --schema を削除
         )
 
         # 終了コードが0（正常終了）
@@ -276,7 +276,7 @@ class TestCLIValidation:
         # schema_path = setup_files["schema_path"] # 削除
 
         result = self.run_cli_command(
-            [str(excel_path), "--config", str(failing_validation_config_path)] # --schema を削除
+            [str(excel_path), "--config", str(failing_validation_config_path)]  # --schema を削除
         )
 
         # 終了コードが1（エラー終了）
@@ -297,7 +297,7 @@ class TestCLIValidation:
         # schema_path = setup_files["schema_path"] # 削除
 
         result = self.run_cli_command(
-            [str(excel_path), "--config", str(validation_config_path), "--validate-only"] # --schema を削除
+            [str(excel_path), "--config", str(validation_config_path), "--validate-only"]  # --schema を削除
         )
 
         # 終了コードが0（正常終了）
@@ -381,7 +381,7 @@ class TestCLIValidation:
 
         # エラー無視なしの場合
         result1 = self.run_cli_command(
-            [str(excel_path), "--config", str(failing_validation_config_path)] # --schema を削除
+            [str(excel_path), "--config", str(failing_validation_config_path)]  # --schema を削除
         )
 
         # 終了コードが1（エラー終了）
