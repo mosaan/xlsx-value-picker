@@ -25,12 +25,57 @@
 -   **バリデーション結果提供 (`$/getDiagnostics`)**: 設定ファイルや対象Excelファイルに対するバリデーション結果をMCPクライアントに通知する。
 -   **ファイル内容の構造化テキスト提供 (`$/getFileContent`)**: 指定されたモデルに基づいて、Excelファイルの内容を構造化されたテキスト（JSON、YAML、Markdown等）として提供する。特に、バリデーションを通過したモデルによる出力のみを生成AIに提供することで、精度の高い情報活用を可能にする。
 -   **既存機能活用**: 既存の `config_loader`, `excel_processor`, `validation` モジュールの機能を再利用する。
--   **エラーハンドリング**: MCP仕様に準拠したエラー通知を行う。
+-   **エラーハンドリング**: MCP仕様に準拠したエラー通知を行う。既存の例外クラスをMCPプロトコルのエラーレスポンスに適切にマッピングする。
+
+    ```python
+    # エラーマッピングの例
+    MCP_ERROR_MAPPING = {
+        ConfigLoadError: {"code": -32803, "message": "設定ファイルの読み込みエラー"},
+        ConfigValidationError: {"code": -32804, "message": "設定ファイルの検証エラー"},
+        ExcelProcessingError: {"code": -32805, "message": "Excelファイル処理エラー"},
+        # その他のエラー
+    }
+    ```
 -   **ロギング**: サーバーの動作状況やエラー情報を記録する。
 
 ### 3.3 生成AI連携機能要件
 
-- **生成AI向け最適化**: 出力フォーマットは生成AIが処理しやすい形式を提供する。構造化データとメタデータを明確に分離し、生成AIが理解しやすい形式とする。
+- **生成AI向け最適化**: 出力フォーマットは生成AIが処理しやすい形式を提供する。構造化データとメタデータを明確に分離し、生成AIが理解しやすい形式とする。具体的には以下のような形式を検討する：
+
+    ```json
+    {
+      "metadata": {
+        "source": "sample.xlsx",
+        "sheet": "Sheet1",
+        "model_id": "inventory_model",
+        "generated_at": "2025-04-24T10:30:00Z",
+        "validation_status": "valid"
+      },
+      "data": {
+        "products": [
+          {"id": "P001", "name": "Product A", "price": 1000, "stock": 50},
+          {"id": "P002", "name": "Product B", "price": 2000, "stock": 30}
+        ]
+      },
+      "schema": {
+        "type": "object",
+        "properties": {
+          "products": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {"type": "string"},
+                "name": {"type": "string"},
+                "price": {"type": "number"},
+                "stock": {"type": "number"}
+              }
+            }
+          }
+        }
+      }
+    }
+    ```
 - **バリデーション統合**: モデル選択の負担を軽減するため、バリデーションを通過したモデルによる出力のみを生成AIに提供する仕組みを実装する。これにより、ユーザーや生成AIが過剰にモデル選択を気にする必要を軽減する。
 - **コンテキスト管理**: 生成AIとの会話コンテキストを維持するための情報を適切に管理・提供する機能を検討する。
 
@@ -39,6 +84,7 @@
 -   **ライブラリ選定**: MCPサーバー機能の実装には、公式の **MCP Python SDK (`mcp`)** を採用する。このSDKはMCPプロトコルの実装を提供し、サーバーおよびクライアント機能を含むため、開発効率とプロトコル準拠性を高めることができる。
 -   **通信バックエンド**: stdio（標準入出力）をバックエンドとして利用し、簡素でロバストな実装を目指す。
 -   **設定ファイル構造**: 複数の「モデル」（Excelファイル処理設定）を管理するため、`config.yaml` の構造を変更する。トップレベルに `models` キーを設け、その下にモデルIDをキーとする辞書形式で各モデルの設定（ファイルパス、シート名、抽出/バリデーションルール、出力形式など）を定義する。
+
     ```yaml
     # config.yaml (例)
     models:
@@ -55,6 +101,27 @@
         extraction_rules: [ ... ]
         validation_rules: [ ... ]
     ```
+
+    この変更に伴い、以下のPydanticモデルを新たに定義する：
+
+    ```python
+    # 現在の構造
+    class ConfigModel(BaseModel):
+        fields: dict[str, str]
+        rules: list[Rule]
+        output: OutputFormat = Field(default_factory=OutputFormat)
+
+    # 新構造
+    class ModelConfig(BaseModel):
+        excel_file_path: str
+        sheet_name: str
+        fields: dict[str, str]
+        rules: list[Rule]
+        output: OutputFormat = Field(default_factory=OutputFormat)
+
+    class AppConfig(BaseModel):
+        models: dict[str, ModelConfig]
+    ```
 -   **アーキテクチャ**:
     -   `src/xlsx_value_picker/mcp_server/` ディレクトリを新設し、サーバー関連のコードを格納する。
     -   `server.py`: サーバーの起動、`mcp` のサーバーインスタンス初期化、リクエストハンドラーの登録を行う。
@@ -62,17 +129,41 @@
     -   `protocol.py`: MCP固有のデータ構造（モデル情報、リクエスト/レスポンスパラメータなど）をPydanticモデルで定義する（`mcp` が提供する型も活用）。
 -   **エントリーポイント**: CLIに `server` サブコマンドを追加し、`xlsx-value-picker server` コマンドでサーバーを起動できるようにする。
 -   **モデル概念**: 設定ファイル (`config.yaml`) 内の `models` 辞書の各エントリ（キーがモデルID、値がモデル設定）をMCPにおける「モデル」として扱う。
--   **状態管理**: サーバーインスタンス内で、`config_loader` を通じて読み込んだ `AppConfig`（全モデル設定を含む）を保持し、リクエストに応じて適切なモデル設定を利用する。
+-   **状態管理**: サーバーインスタンス内で、`config_loader` を通じて読み込んだ `AppConfig`（全モデル設定を含む）を保持し、リクエストに応じて適切なモデル設定を利用する。シンプルなシングルトンパターンを採用し、設定ファイルの読み込みと管理を行う。
+
+    ```python
+    # シンプルな状態管理の例
+    class MCPServerState:
+        _instance = None
+        
+        @classmethod
+        def get_instance(cls, config_path=None):
+            if cls._instance is None and config_path:
+                cls._instance = cls(config_path)
+            return cls._instance
+        
+        def __init__(self, config_path: str):
+            self.config_path = config_path
+            self.app_config = None
+            self.load_config()
+        
+        def load_config(self):
+            # 設定ファイルを読み込み、AppConfigインスタンスを作成
+            config_loader = ConfigLoader()
+            self.app_config = config_loader.load_config(self.config_path)
+    ```
 -   **バリデーション連携**: 既存のバリデーション機能と連携し、`$/getDiagnostics` でバリデーション結果を提供し、`$/getFileContent` ではバリデーション通過状況を考慮した出力を行う。
 
 ## 5. 実装タスク
 
 1.  **依存関係追加**: `pyproject.toml` に **`mcp`** を追加し、`uv add mcp[cli]` を実行する。
-2.  **設定ファイル構造変更**: 
+2.  **設定ファイル構造変更**:
     - `src/xlsx_value_picker/config_loader.py` のPydanticモデルを修正し、提案された複数モデル対応構造（`AppConfig` と `ModelConfig`）を実装する。
     - `load_config` 関数を修正し、新しい構造のYAMLファイルを読み込めるようにする。
     - 既存のテスト (`test/test_config_loader.py`) を修正し、新しい設定構造に対応させる。
     - `test/data/config.yaml` を新しい構造に合わせて更新する。
+    - 既存の`ConfigModel`クラスを`ModelConfig`に改名するか、または新しいクラスを作成するかを検討する。
+    - 後方互換性を維持するための移行戦略を検討し、必要に応じて設定ファイル変換ユーティリティを提供する。
 3.  **ディレクトリ/ファイル作成**: `src/xlsx_value_picker/mcp_server/` ディレクトリと、その配下に `__init__.py`, `server.py`, `handlers.py`, `protocol.py` を作成する。
 4.  **CLIサブコマンド追加**: `src/xlsx_value_picker/cli.py` を修正し、`server` サブコマンドを追加する。このサブコマンドは `mcp_server.server` モジュールの起動関数を呼び出す。
 5.  **サーバー基盤実装 (`server.py`)**: **`mcp`** を用いて基本的なサーバープロセスを実装し、stdioを介してリクエストを待ち受ける処理を記述する。MCP Python SDKの標準的な使用方法に従い、以下のような実装を検討する：
