@@ -74,12 +74,26 @@
 
     ```python
     class MCPConfig(BaseModel):
-        models: list[ModelConfig]
+        models: list[ModelConfigReference | GlobModelConfigReference]
         config: MCPConfigDetails
     
-    class ModelConfig(BaseModel):
+    class ModelConfigReference(BaseModel):
+        """現行形式のモデル設定をそのまま参照する"""
         model_name: str
+        # 簡便にモデル設定ファイルを管理するため、相対パス表記の場合はMCP設定ファイルがあるディレクトリを基準とする。
         config_path: str = Field(..., alias="config")
+        description: str
+    
+    class GlobModelConfigReference(BaseModel):
+        """
+        所定のglobパターンにマッチするモデル設定を参照する. この設定により、複数のモデル設定ファイルを一括で指定できるが、現行形式のモデル設定ファイルでは不足するMCP動作向けの(モデル個別の)設定情報を各モデル設定ファイルに記載することを要求するため、現行形式のモデル設定に対応するPydanticモデルクラスの新形式のモデル設定クラスの新設が併せて必要である.
+        """
+        # ModelConfigReferenceと同様に、相対パス表記の場合はMCP設定ファイルがあるディレクトリを基準とする。
+        config_path_pattern: str
+    
+    class MCPAvailableModelConfig(...): # 現行形式のモデル設定を継承して拡張することを想定
+        # 既存のモデル設定に対応するクラスを継承し、必要なフィールドを追加する。
+        model_name: str
         description: str
     
     type ToolName = Literal[
