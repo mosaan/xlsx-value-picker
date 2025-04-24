@@ -75,7 +75,167 @@
     - `test/data/config.yaml` を新しい構造に合わせて更新する。
 3.  **ディレクトリ/ファイル作成**: `src/xlsx_value_picker/mcp_server/` ディレクトリと、その配下に `__init__.py`, `server.py`, `handlers.py`, `protocol.py` を作成する。
 4.  **CLIサブコマンド追加**: `src/xlsx_value_picker/cli.py` を修正し、`server` サブコマンドを追加する。このサブコマンドは `mcp_server.server` モジュールの起動関数を呼び出す。
-5.  **サーバー基盤実装 (`server.py`)**: **`mcp`** を用いて基本的なサーバープロセスを実装し、stdioを介してリクエストを待ち受ける処理を記述する。
+5.  **サーバー基盤実装 (`server.py`)**: **`mcp`** を用いて基本的なサーバープロセスを実装し、stdioを介してリクエストを待ち受ける処理を記述する。MCP Python SDKの標準的な使用方法に従い、以下のような実装を検討する：
+
+    ```python
+    # server.py
+    import logging
+    from mcp.server.fastmcp import FastMCP
+    from mcp.transports.stdio import StdioTransport
+
+    def create_server():
+        # サーバーの作成
+        server = FastMCP("xlsx-value-picker")
+        
+        # ロギング設定
+        logging.basicConfig(
+            level=logging.INFO,
+            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+            handlers=[logging.StreamHandler()]
+        )
+        
+        return server
+
+    def main(config_path: str = "config.yaml"):
+        """CLIエントリーポイント"""
+        # サーバーの状態を初期化
+        from .state import MCPServerState
+        state = MCPServerState(config_path)
+        
+        # サーバーの作成
+        server = create_server()
+        
+        # ハンドラーの登録
+        from .handlers import register_handlers
+        register_handlers(server, state)
+        
+        # stdioトランスポートでサーバーを起動
+        server.serve(StdioTransport())
+
+    if __name__ == "__main__":
+        main()
+    ```
+
+    また、ハンドラー登録用の関数を以下のように実装する：
+
+    ```python
+    # handlers.py
+    def register_handlers(server, state):
+        """サーバーにハンドラーを登録する"""
+        
+        @server.method("$/listModels")
+        def handle_list_models(params):
+            """利用可能なモデルのリストを返す"""
+            return {"models": list(state.app_config.models.keys())}
+        
+        @server.method("$/getModelInfo")
+        def handle_get_model_info(params):
+            """指定されたモデルの情報を返す"""
+            model_id = params.get("model_id")
+            if not model_id:
+                raise ValueError("model_id パラメータが必要です")
+            
+            model_config = state.app_config.models.get(model_id)
+            if not model_config:
+                raise ValueError(f"モデルが見つかりません: {model_id}")
+            
+            return {
+                "model_id": model_id,
+                "excel_file_path": model_config.excel_file_path,
+                "sheet_name": model_config.sheet_name,
+                "fields": model_config.fields,
+                "rules_count": len(model_config.rules)
+            }
+        
+        @server.method("$/getDiagnostics")
+        def handle_get_diagnostics(params):
+            """指定されたモデルのバリデーション結果を返す"""
+            model_id = params.get("model_id")
+            if not model_id:
+                raise ValueError("model_id パラメータが必要です")
+            
+            model_config = state.app_config.models.get(model_id)
+            if not model_config:
+                raise ValueError(f"モデルが見つかりません: {model_id}")
+            
+            from ..validation import ValidationEngine
+            validation_engine = ValidationEngine(model_config.rules)
+            validation_results = validation_engine.validate(
+                model_config.excel_file_path,
+                model_config.fields
+            )
+            
+            return {
+                "diagnostics": [
+                    {
+                        "message": result.error_message,
+                        "fields": result.error_fields,
+                        "locations": result.error_locations,
+                        "rule": result.rule_name,
+                        "severity": result.severity
+                    }
+                    for result in validation_results
+                ],
+                "is_valid": len(validation_results) == 0
+            }
+        
+        @server.method("$/getFileContent")
+        def handle_get_file_content(params):
+            """指定されたモデルに基づいてExcelファイルの内容を構造化テキストとして提供する"""
+            model_id = params.get("model_id")
+            if not model_id:
+                raise ValueError("model_id パラメータが必要です")
+            
+            model_config = state.app_config.models.get(model_id)
+            if not model_config:
+                raise ValueError(f"モデルが見つかりません: {model_id}")
+            
+            # バリデーション実行（必要に応じて）
+            validation_results = []
+            if model_config.rules and not params.get("skip_validation", False):
+                from ..validation import ValidationEngine
+                validation_engine = ValidationEngine(model_config.rules)
+                validation_results = validation_engine.validate(
+                    model_config.excel_file_path,
+                    model_config.fields
+                )
+            
+            # バリデーションエラーがある場合
+            if validation_results and not params.get("ignore_validation", False):
+                return {
+                    "validation_errors": [
+                        {
+                            "message": result.error_message,
+                            "fields": result.error_fields,
+                            "locations": result.error_locations,
+                            "rule": result.rule_name
+                        }
+                        for result in validation_results
+                    ],
+                    "content": None,
+                    "format": model_config.output.format
+                }
+            
+            # Excelファイルからデータ抽出
+            from ..excel_processor import ExcelValueExtractor
+            with ExcelValueExtractor(model_config.excel_file_path) as extractor:
+                data = extractor.extract_values(model_config)
+            
+            # 出力フォーマット処理
+            from ..output_formatter import OutputFormatter
+            formatter = OutputFormatter(model_config)
+            formatted_output = formatter.format_output(data)
+            
+            return {
+                "content": formatted_output,
+                "format": model_config.output.format,
+                "metadata": {
+                    "source": model_config.excel_file_path,
+                    "model_id": model_id,
+                    "validation_status": "valid" if not validation_results else "warning"
+                }
+            }
+    ```
 6.  **MCPプロトコル定義 (`protocol.py`)**: 
     - `$/listModels`, `$/getModelInfo`, `$/getDiagnostics`, `$/getFileContent` で使用するリクエスト/レスポンスのパラメータ構造をPydanticモデルで定義する（`mcp` の型定義も活用）。
 7.  **ハンドラー実装 (`handlers.py`)**:
