@@ -18,13 +18,16 @@
 
 ### 3.2 コア機能要件
 
--   **サーバー起動**: 指定されたポートでMCPサーバーとして起動できる。
--   **設定連携**: 既存の設定ファイル (`config.yaml`) を読み込み、サーバーの動作に反映する。
--   **モデルリスト提供 (`$/listModels`)**: 設定ファイルに基づき、利用可能な「モデル」（Excelファイル処理設定に対応）のリストを提供する。
--   **モデル情報提供 (`$/getModelInfo`)**: 指定されたモデルに関する詳細情報（設定内容、対象ファイルなど）を提供する。
--   **バリデーション結果提供 (`$/getDiagnostics`)**: 設定ファイルや対象Excelファイルに対するバリデーション結果をMCPクライアントに通知する。
--   **ファイル内容の構造化テキスト提供 (`$/getFileContent`)**: 指定されたモデルに基づいて、Excelファイルの内容を構造化されたテキスト（JSON、YAML、Markdown等）として提供する。特に、バリデーションを通過したモデルによる出力のみを生成AIに提供することで、精度の高い情報活用を可能にする。
--   **既存機能活用**: 既存の `config_loader`, `excel_processor`, `validation` モジュールの機能を再利用する。
+用語の定義:
+- モデル: 設定ファイルに基づくExcelファイル処理の設定を指す。具体的には、Excelファイルのパス、シート名、抽出/バリデーションルール、出力形式などを含む、既存機能が定義する情報である。
+- MCP動作設定ファイル: MCPサーバーの動作に必要な設定を指す。具体的には、MCPサーバーの起動時に読み込むモデル設定ファイル(複数の可能性あり)のパスや、MCPサーバが提供する補助情報(MCPサーバが提供する各ツールの説明文など)の設定を含む。
+
+-   **サーバー起動**: サブコマンド`mcp`によりMCPサーバーとして起動できる。
+-   **設定連携**: MCP動作設定ファイルに基づき、設定ファイルを複数読み込み、利用可能なモデル一覧としてサーバーの動作に反映する。
+-   **モデルリスト提供 (`listModels`)**: 設定ファイルに基づき、利用可能な「モデル」（Excelファイル処理設定に対応）のリストを提供する。
+-   **モデル情報提供 (`getModelInfo`)**: 指定されたモデルに関する詳細情報（設定内容、対象ファイルなど）を提供する。
+-   **バリデーション結果提供 (`getDiagnostics`)**: 設定ファイルや対象Excelファイルに対するバリデーション結果をMCPクライアントに通知する。
+-   **ファイル内容の構造化テキスト提供 (`getFileContent`)**: 指定されたモデルに基づいて、Excelファイルの内容を構造化されたテキスト（JSON、YAML、Markdown等）として提供する。特に、バリデーションを通過したモデルによる出力のみを生成AIに提供することで、精度の高い情報活用を可能にする。
 -   **エラーハンドリング**: MCP仕様に準拠したエラー通知を行う。既存の例外クラスをMCPプロトコルのエラーレスポンスに適切にマッピングする。
 
     ```python
@@ -40,90 +43,58 @@
 
 ### 3.3 生成AI連携機能要件
 
-- **生成AI向け最適化**: 出力フォーマットは生成AIが処理しやすい形式を提供する。構造化データとメタデータを明確に分離し、生成AIが理解しやすい形式とする。具体的には以下のような形式を検討する：
-
-    ```json
-    {
-      "metadata": {
-        "source": "sample.xlsx",
-        "sheet": "Sheet1",
-        "model_id": "inventory_model",
-        "generated_at": "2025-04-24T10:30:00Z",
-        "validation_status": "valid"
-      },
-      "data": {
-        "products": [
-          {"id": "P001", "name": "Product A", "price": 1000, "stock": 50},
-          {"id": "P002", "name": "Product B", "price": 2000, "stock": 30}
-        ]
-      },
-      "schema": {
-        "type": "object",
-        "properties": {
-          "products": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "id": {"type": "string"},
-                "name": {"type": "string"},
-                "price": {"type": "number"},
-                "stock": {"type": "number"}
-              }
-            }
-          }
-        }
-      }
-    }
-    ```
 - **バリデーション統合**: モデル選択の負担を軽減するため、バリデーションを通過したモデルによる出力のみを生成AIに提供する仕組みを実装する。これにより、ユーザーや生成AIが過剰にモデル選択を気にする必要を軽減する。
-- **コンテキスト管理**: 生成AIとの会話コンテキストを維持するための情報を適切に管理・提供する機能を検討する。
 
 ## 4. 設計方針
 
 -   **ライブラリ選定**: MCPサーバー機能の実装には、公式の **MCP Python SDK (`mcp`)** を採用する。このSDKはMCPプロトコルの実装を提供し、サーバーおよびクライアント機能を含むため、開発効率とプロトコル準拠性を高めることができる。
 -   **通信バックエンド**: stdio（標準入出力）をバックエンドとして利用し、簡素でロバストな実装を目指す。
--   **設定ファイル構造**: 複数の「モデル」（Excelファイル処理設定）を管理するため、`config.yaml` の構造を変更する。トップレベルに `models` キーを設け、その下にモデルIDをキーとする辞書形式で各モデルの設定（ファイルパス、シート名、抽出/バリデーションルール、出力形式など）を定義する。
+-   **既存機能活用**: 既存の `config_loader`, `excel_processor`, `validation` モジュールの機能を再利用しつつ、適切な実装のためのコード再配置などのリファクタリングを行う。
+-   **設定ファイル構造**: 複数の「モデル」（Excelファイル処理設定）を管理するため、MCP動作設定ファイル(デフォルトファイル名 `mcp.yaml`)を新設する。トップレベルに `models` キーを設け、その下に配列形式で各モデルの設定（モデル名称, モデル設定ファイルパス, モデル説明文など）を定義する。また、MCPサーバ機能全体にかかわる設定を、トップレベルに `config` キーを設けて定義する。
 
     ```yaml
     # config.yaml (例)
     models:
-      model_id_1:
-        excel_file_path: data/sample1.xlsx
-        sheet_name: Sheet1
-        output_format: json
-        extraction_rules: [ ... ]
-        validation_rules: [ ... ]
-      model_id_2:
-        excel_file_path: data/sample2.xlsx
-        sheet_name: Data
-        output_format: markdown
-        extraction_rules: [ ... ]
-        validation_rules: [ ... ]
+      - model_name: model1
+        config: ./model1.yaml
+        description: "Model 1 description"
+      - model_name: model2
+        config: ./model2.yaml
+        description: "Model 2 description"
+    config:
+        tool_descriptions:
+            listModels: "List available models"
+            getModelInfo: "Get model information"
+            getDiagnostics: "Get validation results"
+            getFileContent: "Get structured text from Excel file"
+        # その他の動作設定(候補を要検討)
     ```
 
     この変更に伴い、以下のPydanticモデルを新たに定義する：
 
     ```python
-    # 現在の構造
-    class ConfigModel(BaseModel):
-        fields: dict[str, str]
-        rules: list[Rule]
-        output: OutputFormat = Field(default_factory=OutputFormat)
-
-    # 新構造
+    class MCPConfig(BaseModel):
+        models: list[ModelConfig]
+        config: MCPConfigDetails
+    
     class ModelConfig(BaseModel):
-        excel_file_path: str
-        sheet_name: str
-        fields: dict[str, str]
-        rules: list[Rule]
-        output: OutputFormat = Field(default_factory=OutputFormat)
-
-    class AppConfig(BaseModel):
-        models: dict[str, ModelConfig]
+        model_name: str
+        config_path: str = Field(..., alias="config")
+        description: str
+    
+    type ToolName = Literal[
+        "listModels",
+        "getModelInfo",
+        "getDiagnostics",
+        "getFileContent"
+    ]
+    class MCPConfigDetails(BaseModel):
+        tool_descriptions: dict[ToolName, str]
+        # その他の設定項目を追加
     ```
+<!-- 以降記載見直し中. 現時点では未確定のドラフトとして扱う. -->
 -   **アーキテクチャ**:
-    -   `src/xlsx_value_picker/mcp_server/` ディレクトリを新設し、サーバー関連のコードを格納する。
+    -   `src/xlsx_value_picker/mcp/` ディレクトリを新設し、サーバー関連のコードを格納する。
     -   `server.py`: サーバーの起動、`mcp` のサーバーインスタンス初期化、リクエストハンドラーの登録を行う。
     -   `handlers.py`: 各MCPリクエスト (`$/listModels`, `$/getModelInfo`, `$/getFileContent`, `$/getDiagnostics`) に対応するハンドラー関数を実装する。
     -   `protocol.py`: MCP固有のデータ構造（モデル情報、リクエスト/レスポンスパラメータなど）をPydanticモデルで定義する（`mcp` が提供する型も活用）。
