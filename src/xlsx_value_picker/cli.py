@@ -15,7 +15,7 @@ from .exceptions import (
 )
 from .output_formatter import OutputFormatter
 from .validation import ValidationEngine
-from .validation_common import ValidationResult  # インポート元を修正
+from .validator.validation_common import ValidationResult  # インポート元を修正
 
 
 def _handle_error(

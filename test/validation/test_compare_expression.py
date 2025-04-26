@@ -5,7 +5,7 @@ CompareExpressionのテスト（pytestスタイル）
 import pytest
 
 # Expression関連は validation_expressions からインポート
-from xlsx_value_picker.validation_expressions import CompareExpression
+from xlsx_value_picker.validator.validation_expressions import CompareExpression
 
 
 class TestCompareExpression:

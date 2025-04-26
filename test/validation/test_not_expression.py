@@ -3,7 +3,7 @@ NotExpressionのpytestテスト
 """
 
 # Expression関連は validation_expressions からインポート
-from xlsx_value_picker.validation_expressions import CompareExpression, NotExpression
+from xlsx_value_picker.validator.validation_expressions import CompareExpression, NotExpression
 
 
 def test_not_valid(validation_context):  # Use the common fixture

@@ -21,7 +21,7 @@ from xlsx_value_picker.config_loader import (
     Rule,
 )
 from xlsx_value_picker.exceptions import ConfigLoadError, ConfigValidationError
-from xlsx_value_picker.validation_expressions import RequiredExpression
+from xlsx_value_picker.validator.validation_expressions import RequiredExpression
 
 
 # --- テストデータ作成用ヘルパー関数 ---

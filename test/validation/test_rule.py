@@ -5,7 +5,7 @@ Ruleのpytestテスト
 from xlsx_value_picker.config_loader import Rule  # Rule は config_loader に残る
 
 # Expression関連は validation_expressions からインポート
-from xlsx_value_picker.validation_expressions import CompareExpression
+from xlsx_value_picker.validator.validation_expressions import CompareExpression
 
 
 def test_rule_valid(validation_context):  # Use the common fixture

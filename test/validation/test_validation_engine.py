@@ -8,7 +8,7 @@ from xlsx_value_picker.config_loader import Rule  # Rule は config_loader に�
 from xlsx_value_picker.validation import ValidationEngine
 
 # Expression関連は validation_expressions からインポート
-from xlsx_value_picker.validation_expressions import CompareExpression, RegexMatchExpression
+from xlsx_value_picker.validator.validation_expressions import CompareExpression, RegexMatchExpression
 
 
 @patch("xlsx_value_picker.excel_processor.get_excel_values")

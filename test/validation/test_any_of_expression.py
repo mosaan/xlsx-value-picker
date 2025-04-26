@@ -3,7 +3,7 @@ AnyOfExpressionのpytestテスト
 """
 
 # Expression関連は validation_expressions からインポート
-from xlsx_value_picker.validation_expressions import (
+from xlsx_value_picker.validator.validation_expressions import (
     AnyOfExpression,
     CompareExpression,
     RegexMatchExpression,

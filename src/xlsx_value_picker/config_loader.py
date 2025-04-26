@@ -12,8 +12,8 @@ from pydantic import ValidationError as PydanticValidationError
 
 # カスタム例外をインポート
 from .exceptions import ConfigLoadError, ConfigValidationError, XlsxValuePickerError
-from .validation_common import ValidationContext, ValidationResult
-from .validation_expressions import ExpressionType
+from .validator.validation_common import ValidationContext, ValidationResult
+from .validator.validation_expressions import ExpressionType
 
 # ConfigValidationError は exceptions.py に移動済みのため削除
 

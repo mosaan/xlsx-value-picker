@@ -5,7 +5,7 @@ RegexMatchExpressionのpytestテスト
 import pytest
 
 # Expression関連は validation_expressions からインポート
-from xlsx_value_picker.validation_expressions import RegexMatchExpression
+from xlsx_value_picker.validator.validation_expressions import RegexMatchExpression
 
 # Remove the context fixture, it's now in conftest.py
 
