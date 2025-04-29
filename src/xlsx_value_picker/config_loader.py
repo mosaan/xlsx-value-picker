@@ -4,9 +4,10 @@ JSONスキーマに基づく設定データ読み込み機能
 
 import json
 import os
-from typing import Any, Self, cast
+from typing import Any, Literal, Self, Union, cast
 
 import yaml
+from fastmcp import FastMCP
 from pydantic import BaseModel, Field, field_validator, model_validator
 from pydantic import ValidationError as PydanticValidationError
 
@@ -197,9 +198,70 @@ class ConfigLoader:
             raise ConfigValidationError(f"設定ファイルのモデル検証に失敗しました: {error_details}") from e
         except Exception as e:
             # その他の予期せぬエラー
-            raise XlsxValuePickerError(f"設定ファイルの処理中に予期せぬエラーが発生しました: {e}") from e
+            raise ConfigValidationError(e)
+
+
+    def load_mcp_config(self, config_path: str) -> "MCPConfig":
+        """
+        MCP設定ファイルを読み込み、MCPConfigモデルオブジェクトを返す
+
+        Args:
+            config_path: MCP設定ファイルのパス
+
+        Returns:
+            MCPConfig: MCP設定モデルオブジェクト
+
+        Raises:
+            ConfigLoadError: 設定ファイルの読み込みやパースに失敗した場合
+            ConfigValidationError: 設定ファイルのモデル検証に失敗した場合
+        """
+        try:
+            # 設定ファイルのパース
+            config_data = ConfigParser.parse_file(config_path)
+
+            # MCPConfigモデルオブジェクトの生成
+            mcp_config = MCPConfig.model_validate(config_data)
+            return mcp_config
+
+        except ConfigLoadError as e:
+            raise e
+        except PydanticValidationError as e:
+            error_details = "; ".join([f"{err['loc']}: {err['msg']}" for err in e.errors()])
+            raise ConfigValidationError(f"MCP設定ファイルのモデル検証に失敗しました: {error_details}") from e
+        except Exception as e:
+            raise XlsxValuePickerError(f"MCP設定ファイルの処理中に予期せぬエラーが発生しました: {e}") from e
 
 
 # Pydanticモデルの循環参照を解決するために再構築
 Rule.model_rebuild()
 ConfigModel.model_rebuild()
+
+"""
+MCPサーバー設定関連クラス
+"""
+
+type ToolNames = Literal["listModels", "getModelInfo", "getDiagnostics", "getFileContent"]
+
+
+class MCPConfig(BaseModel):
+    models: list[Union["ModelConfigReference", "GlobModelConfigReference"]]
+    config: "MCPConfigDetails"
+
+    def configure(self) -> "FastMCP":
+        """設定内容に基づいてFastMCPサーバのインスタンスを構築して返す"""
+        # サーバ設定処理を実装
+        pass
+
+
+class ModelConfigReference(BaseModel):
+    config_path: str = Field(..., alias="config")
+    model_name: str | None = None
+    model_description: str | None = None
+
+
+class GlobModelConfigReference(BaseModel):
+    config_path_pattern: str
+
+
+class MCPConfigDetails(BaseModel):
+    tool_descriptions: dict[ToolNames, str]

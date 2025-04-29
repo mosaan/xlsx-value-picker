@@ -259,3 +259,29 @@ class TestConfigLoader:
             loader.load_config(str(config_path))
         assert "設定ファイルのモデル検証に失敗しました" in str(excinfo.value)
         assert "Value error, 少なくとも1つのフィールド定義が必要です" in str(excinfo.value)
+
+import pytest
+from src.xlsx_value_picker.config_loader import ConfigLoader, MCPConfig, ConfigLoadError, ConfigValidationError
+
+def test_load_mcp_config_valid():
+    """有効なMCP設定ファイルを正しく読み込むことをテスト"""
+    loader = ConfigLoader()
+    config_path = "test/data/valid_mcp_config.yaml"
+    mcp_config = loader.load_mcp_config(config_path)
+    assert isinstance(mcp_config, MCPConfig)
+    assert len(mcp_config.models) > 0
+    assert "listModels" in mcp_config.config.tool_descriptions
+
+def test_load_mcp_config_invalid_format():
+    """無効な形式のMCP設定ファイルを処理する際のエラーをテスト"""
+    loader = ConfigLoader()
+    config_path = "test/data/invalid_format_mcp_config.yaml"
+    with pytest.raises(ConfigValidationError):
+        loader.load_mcp_config(config_path)
+
+def test_load_mcp_config_missing_file():
+    """存在しないMCP設定ファイルを処理する際のエラーをテスト"""
+    loader = ConfigLoader()
+    config_path = "test/data/non_existent_config.yaml"
+    with pytest.raises(ConfigLoadError):
+        loader.load_mcp_config(config_path)

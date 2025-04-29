@@ -69,6 +69,17 @@
             getFileContent: "Get structured text from Excel file"
         # その他の動作設定(候補を要検討)
     ```
+### **現在の課題**
+- **テスト失敗**: `test/test_config_loader.py` のテストケースで以下の問題が発生。
+  - **Invalid YAML/JSON Parsing**: 不正なYAML/JSONファイルのパースに失敗。
+  - **Nonexistent Files**: 存在しないファイルに対するエラー処理。
+  - **Unsupported Extensions**: サポートされていない拡張子のエラー処理。
+  - **Assertion Failure**: `test_load_config_success` でのアサーションエラー。
+
+### **次のステップ**
+- **ConfigLoaderのデバッグ**: 上記の問題を解決するため、`ConfigLoader` の実装を見直し、エラーハンドリングを強化。
+- **テストデータの確認**: テストデータが正しい形式であることを確認済み。
+- **計画の更新**: MCPサーバー機能の実装に影響を与える可能性があるため、計画を調整。
 
     この変更に伴い、以下のPydanticモデルを新たに定義する：
 
