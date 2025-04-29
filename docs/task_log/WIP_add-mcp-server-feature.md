@@ -292,4 +292,14 @@ if __name__ == "__main__":
 1.  本計画書の内容についてユーザーレビューを受け、承認を得る。
 2.  承認後、ファイル名を `WIP_add-mcp-server-feature.md` に変更し、実装タスクを開始する。
 3.  実装とテストが完了したら、ユーザーに完了報告を行い、承認を得る。
+## 進捗状況の更新
+
+### 実施済みタスク
+1. 必要なディレクトリとファイルが作成済み。
+   - `src/xlsx_value_picker/mcp_server/` 配下に以下のファイルを作成：
+     - `__init__.py`
+     - `server.py`
+     - `handlers.py`
+     - `protocol.py`
+2. `pyproject.toml` に `mcp` パッケージが既に含まれているため、依存関係追加タスクは不要。
 4.  承認後、作業内容のサマリを追記し、ファイル名を `DONE_add-mcp-server-feature.md` に変更する。
