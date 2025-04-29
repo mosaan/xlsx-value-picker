@@ -54,7 +54,7 @@
 *   本計画書 (`docs/task_log/PLANNING_investigate-pytest-raises-behavior.md`)
 *   
 
-## 3. 調査方針と結果
+## 7. 調査方針と結果
 
 1.  **独立したテストファイルの作成**: `test/test_pytest.py` を作成。(完了)
 2.  **シンプルなテストケースの実装**: `test/test_pytest.py` 内で定義した単純なカスタム例外 (`MyTestError`) を用いて、`pytest.raises` の基本的な例外捕捉、異なる例外の非捕捉、メッセージ検証機能を確認。(完了)
@@ -69,13 +69,13 @@
 11. **追加テスト実行と結果確認 (モジュール二重ロードの影響)**: 上記テストケースを実行。Python のモジュールキャッシュ機構により、このテスト環境では意図的なクラスオブジェクトの不一致を再現するには至らなかった。(完了、テスト自体は成功)
 12. **`test_config_loader.py` での追加検証**: ユーザーにより、`test_config_loader.py` 内の `sys.path.insert(0, ...)` 行をコメントアウトすると、`pytest.raises(ConfigLoadError)` が期待通り動作するようになることを確認。(完了)
 
-## 4. 結論
+## 8. 結論
 
 *   `pytest.raises` の基本的な機能（単純な例外、多段継承、例外ラップ、インポートされた例外の捕捉）自体には問題は見られない。
 *   `test_config_loader.py` における `pytest.raises(ConfigLoadError)` の失敗は、テストファイル冒頭で行われている `sys.path.insert(0, ...)` による **`sys.path` の動的な操作が根本原因**である可能性が極めて高い。
 *   この操作により、テスト実行時に `xlsx_value_picker.exceptions` モジュールが pytest によって認識されるパスと `sys.path` 操作によって追加されたパスのいずれか、あるいは双方から読み込まれ、結果としてテストコードが期待する `ConfigLoadError` クラスオブジェクトと、実際に `config_loader.py` から送出される `ConfigLoadError` クラスオブジェクトが、Python 内部で**異なるものとして扱われてしまう**（モジュールの二重ロードに類似した状況）ため、`pytest.raises` が一致を検出できずに失敗すると考えられる。
 
-## 5. 推奨される解決策
+## 9. 推奨される解決策
 
 `test_config_loader.py` から以下の行を削除する:
 ```python
