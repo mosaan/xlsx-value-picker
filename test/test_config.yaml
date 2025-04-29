@@ -1,7 +1,7 @@
 models:
   - model_name: test_model
     config: ./data/config_minimal.yaml
-    description: "Test model configuration"
+    model_description: "Test model configuration"
 config:
   tool_descriptions:
     listModels: "List available models"
