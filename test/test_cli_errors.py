@@ -13,7 +13,6 @@ import pytest
 import yaml
 
 
-
 def create_test_excel(path):
     """テスト用のExcelファイルを作成する"""
     wb = openpyxl.Workbook()

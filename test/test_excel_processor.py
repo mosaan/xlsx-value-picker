@@ -2,12 +2,10 @@
 Excelファイル処理機能のテスト
 """
 
-import sys
 from pathlib import Path
 
 import openpyxl
 import pytest
-
 
 from xlsx_value_picker.config_loader import ConfigModel, OutputFormat
 from xlsx_value_picker.excel_processor import ExcelValueExtractor

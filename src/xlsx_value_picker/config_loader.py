@@ -205,7 +205,9 @@ class ConfigLoader:
             raise ConfigValidationError(f"設定ファイルのモデル検証に失敗しました: {error_details}") from e
         except Exception as e:
             # その他の予期せぬエラー
-            raise ConfigValidationError(e)
+            raise ConfigValidationError(
+                f"設定ファイルの読み込み時に予期しないエラーが発生しました: {config_path}"
+            ) from e
 
     def load_mcp_config(self, config_path: str) -> "MCPConfig":
         """

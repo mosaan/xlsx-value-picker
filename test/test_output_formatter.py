@@ -3,12 +3,9 @@
 """
 
 import json
-import sys
-from pathlib import Path
 
 import pytest
 import yaml
-
 
 from xlsx_value_picker.config_loader import ConfigModel, OutputFormat
 from xlsx_value_picker.output_formatter import OutputFormatter

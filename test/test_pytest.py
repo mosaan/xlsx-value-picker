@@ -1,3 +1,7 @@
+import sys
+from pathlib import Path
+from unittest.mock import patch
+
 import pytest
 
 
@@ -95,15 +99,18 @@ def test_pytest_raises_wrapped_exception():
 
 
 # --- インポートされた例外のテスト ---
-from test.helper_exceptions import ExternalError  # 別ファイルから例外クラスをインポート
 
 
 def raise_external_error():
+    from test.helper_exceptions import ExternalError  # 別ファイルから例外クラスをインポート
+
     raise ExternalError("External error occurred")
 
 
 def test_pytest_raises_imported_exception():
     """pytest.raises が別モジュールからインポートされた例外を捕捉できるか確認する"""
+    from test.helper_exceptions import ExternalError  # 別ファイルから例外クラスをインポート
+
     with pytest.raises(ExternalError):
         raise_external_error()
 
@@ -111,50 +118,35 @@ def test_pytest_raises_imported_exception():
     with pytest.raises(ExternalError, match="External error occurred"):
         raise_external_error()
 
-# ...existing code...
-import sys
-from pathlib import Path
-from unittest.mock import patch
 
 # --- インポートされた例外のテスト ---
-from test.helper_exceptions import ExternalError  # 別ファイルから例外クラスをインポート
 
-
-def raise_external_error():
-    raise ExternalError("External error occurred")
-
-
-def test_pytest_raises_imported_exception():
-    """pytest.raises が別モジュールからインポートされた例外を捕捉できるか確認する"""
-    with pytest.raises(ExternalError):
-        raise_external_error()
-
-    # メッセージ検証も可能か確認
-    with pytest.raises(ExternalError, match="External error occurred"):
-        raise_external_error()
 
 # --- sys.path 操作の影響テスト ---
-def test_pytest_raises_imported_exception_with_sys_path():
+def test_pytest_raises_imported_exception_with_sys_path2():
     """sys.path 操作がインポートされた例外の捕捉に影響するか確認する"""
+    from test.helper_exceptions import ExternalError  # 別ファイルから例外クラスをインポート
+
     # 現在の test ディレクトリの親 (プロジェクトルート) を sys.path の先頭に追加してみる
     project_root = str(Path(__file__).parent.parent)
-    original_sys_path = sys.path[:] # 元の sys.path をコピー
+    original_sys_path = sys.path[:]  # 元の sys.path をコピー
 
     # unittest.mock.patch を使って sys.path を一時的に変更
     # patch デコレータを使う代わりに with ステートメントを使う
-    with patch.object(sys, 'path', [project_root] + original_sys_path):
+    with patch.object(sys, "path", [project_root] + original_sys_path):
         # sys.path が変更された状態でテストを実行
-        print(f"\nDEBUG: sys.path inside patch: {sys.path}") # デバッグ出力
+        print(f"\nDEBUG: sys.path inside patch: {sys.path}")  # デバッグ出力
         # 再度インポートを試みる (キャッシュされている可能性もあるが念のため)
         try:
             from test.helper_exceptions import ExternalError as PatchedExternalError
+
             print(f"DEBUG: ExternalError id: {id(ExternalError)}")
             print(f"DEBUG: PatchedExternalError id: {id(PatchedExternalError)}")
             # ExternalError と PatchedExternalError が同じオブジェクトか確認
             assert ExternalError is PatchedExternalError, "ExternalError objects differ after sys.path manipulation!"
 
             with pytest.raises(PatchedExternalError):
-                raise_external_error() # raise_external_error は元の ExternalError を送出する
+                raise_external_error()  # raise_external_error は元の ExternalError を送出する
 
             # メッセージ検証
             with pytest.raises(PatchedExternalError, match="External error occurred"):
@@ -165,19 +157,15 @@ def test_pytest_raises_imported_exception_with_sys_path():
 
     # patch ブロックを抜けた後、sys.path が元に戻っているか確認 (オプション)
     assert sys.path == original_sys_path, "sys.path was not restored correctly after patch"
-    print(f"\nDEBUG: sys.path after patch: {sys.path}") # デバッグ出力
+    print(f"\nDEBUG: sys.path after patch: {sys.path}")  # デバッグ出力
+
 
 # ...existing code...
-import sys
-import importlib # importlib を追加
-from pathlib import Path
-from unittest.mock import patch
 
 # ... (既存のテストケースは省略) ...
 
 # --- sys.path 操作によるモジュール二重ロードの影響テスト ---
-# まず普通にインポート
-from test.helper_exceptions import ExternalError as ErrorFromDirectImport
+
 
 def test_pytest_raises_fails_on_dual_load():
     """
@@ -188,8 +176,11 @@ def test_pytest_raises_fails_on_dual_load():
     original_sys_path = sys.path[:]
 
     # プロジェクトルートを sys.path の先頭に追加
-    with patch.object(sys, 'path', [project_root] + original_sys_path):
+    with patch.object(sys, "path", [project_root] + original_sys_path):
         print(f"\nDEBUG: sys.path inside patch for dual load test: {sys.path}")
+
+        # まず普通にインポート
+        from test.helper_exceptions import ExternalError as ErrorFromDirectImport
 
         # モジュールを 'test.helper_exceptions' という名前で再インポート試行
         # importlib.reload は既存のモジュールオブジェクトを更新するだけなので、
@@ -203,6 +194,7 @@ def test_pytest_raises_fails_on_dual_load():
             #       しかし、pytest の実行環境や sys.path の影響で意図せず
             #       別オブジェクトになるケースをシミュレートするのが目的。
             import test.helper_exceptions
+
             # importlib.reload(test.helper_exceptions) # reload は既存オブジェクトを更新する
             ErrorFromSysPathImport = test.helper_exceptions.ExternalError
 
@@ -213,7 +205,8 @@ def test_pytest_raises_fails_on_dual_load():
             # このテストでは、まず同じオブジェクトであることを確認し、
             # もし test_config_loader.py で問題が起きるなら、
             # 実際の環境では is False になっていると推測する。
-            # assert ErrorFromDirectImport is not ErrorFromSysPathImport, "Hypothesis failed: Objects are the same even with sys.path manipulation."
+            # assert ErrorFromDirectImport is not ErrorFromSysPathImport,
+            # "Hypothesis failed: Objects are the same even with sys.path manipulation."
 
             # もしオブジェクトが異なると仮定した場合、以下の pytest.raises は失敗するはず
             print("DEBUG: Attempting to catch ErrorFromSysPathImport using pytest.raises(ErrorFromDirectImport)")
@@ -223,18 +216,24 @@ def test_pytest_raises_fails_on_dual_load():
                 # もし↑が成功してしまったら、仮説がこのテストでは再現できなかったことを示す
                 print("WARN: pytest.raises(ErrorFromDirectImport) unexpectedly succeeded.")
                 # このテストケース自体の成功/失敗は、is 演算子の結果に依存させるべきかもしれない
-                assert ErrorFromDirectImport is ErrorFromSysPathImport, "pytest.raises succeeded, implying objects were the same."
+                assert ErrorFromDirectImport is ErrorFromSysPathImport, (
+                    "pytest.raises succeeded, implying objects were the same."
+                )
 
             except Exception as e:
                 # pytest.raises が期待通り失敗した場合 (捕捉できなかった場合)
-                print(f"DEBUG: pytest.raises(ErrorFromDirectImport) failed as expected (or another error occurred): {type(e)} - {e}")
+                print(
+                    "DEBUG: pytest.raises(ErrorFromDirectImport) failed "
+                    + f"as expected (or another error occurred): {type(e)} - {e}"
+                )
                 # 捕捉できなかった例外が ErrorFromSysPathImport であることを確認
                 assert isinstance(e, ErrorFromSysPathImport)
                 # そして、捕捉しようとした ErrorFromDirectImport とは型が異なることを確認
-                assert not isinstance(e, ErrorFromDirectImport) # is演算子の方がより厳密
-                assert ErrorFromDirectImport is not ErrorFromSysPathImport, "pytest.raises failed, confirming objects are different."
+                assert not isinstance(e, ErrorFromDirectImport)  # is演算子の方がより厳密
+                assert ErrorFromDirectImport is not ErrorFromSysPathImport, (
+                    "pytest.raises failed, confirming objects are different."
+                )
                 print("DEBUG: Successfully confirmed pytest.raises failure due to object mismatch.")
-
 
         except ImportError as e:
             pytest.fail(f"Failed to import test.helper_exceptions after manipulating sys.path: {e}")

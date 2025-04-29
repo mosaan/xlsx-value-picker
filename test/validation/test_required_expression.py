@@ -48,11 +48,11 @@ def test_required_expression(validation_context, field_spec, expected_valid, tes
         # 複数フィールドの場合
         else:
             # 無効なフィールドのセットを作成
-            error_fields_set = set(
+            error_fields_set = {
                 field
                 for field in field_spec
                 if validation_context.get_field_value(field) is None or validation_context.get_field_value(field) == ""
-            )
+            }
             # エラーフィールドのセットが一致するか確認
             assert set(result.error_fields) == error_fields_set
 
