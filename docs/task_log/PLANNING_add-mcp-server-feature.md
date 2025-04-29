@@ -76,13 +76,17 @@
     class MCPConfig(BaseModel):
         models: list[ModelConfigReference | GlobModelConfigReference]
         config: MCPConfigDetails
+        def configure(self) -> FastMCP:
+            """設定内容に基づいてFastMCPサーバのインスタンスを構築して返す"""
+            ... # サーバ設定処理
+            return server
     
     class ModelConfigReference(BaseModel):
-        """現行形式のモデル設定をそのまま参照する"""
-        model_name: str
+        """現行形式、あるいは新形式のモデル設定をそのまま参照する"""
         # 簡便にモデル設定ファイルを管理するため、相対パス表記の場合はMCP設定ファイルがあるディレクトリを基準とする。
         config_path: str = Field(..., alias="config")
-        description: str
+        model_name: str | None = None # 新形式の場合は不要
+        description: str | None = None # 新形式の場合は不要
     
     class GlobModelConfigReference(BaseModel):
         """
@@ -106,226 +110,95 @@
         tool_descriptions: dict[ToolName, str]
         # その他の設定項目を追加
     ```
+
+```mermaid
+---
+title: MCP 動作設定関連クラス
+---
+classDiagram
+    note "pydanticインタフェースは<br>BaseModel継承クラス(Pydanticモデル)<br>であることを表す。"
+    class MCPConfig {<<pydantic>>}
+    MCPConfig o-- ConfigDefinitions
+    MCPConfig o-- MCPConfigDetails
+
+    class ConfigDefinitions {
+        <<interface>>
+        + getConfigurations() list[MCPAvailableModelConfig]
+    }
+    class ModelConfigReference {
+        <<pydantic>>
+        - model_name str
+        - model_description str
+        - model_config_path str
+    }
+    ConfigDefinitions <|-- ModelConfigReference
+
+    class GlobModelConfigReference {
+        <<pydantic>>
+        - model_config_glob_path str
+    }
+    ConfigDefinitions <|-- GlobModelConfigReference
+
+    class MCPConfigDetails {
+        <<pydantic>>
+        - tool_descriptions dict[ToolName, str]
+    }
+```
 <!-- 以降記載見直し中. 現時点では未確定のドラフトとして扱う. -->
 -   **アーキテクチャ**:
     -   `src/xlsx_value_picker/mcp/` ディレクトリを新設し、サーバー関連のコードを格納する。
     -   `server.py`: サーバーの起動、`mcp` のサーバーインスタンス初期化、リクエストハンドラーの登録を行う。
-    -   `handlers.py`: 各MCPリクエスト (`$/listModels`, `$/getModelInfo`, `$/getFileContent`, `$/getDiagnostics`) に対応するハンドラー関数を実装する。
+    -   `handlers.py`: 各MCPリクエスト (`listModels`, `getModelInfo`, `getFileContent`, `getDiagnostics`) に対応するハンドラー関数を実装する。
     -   `protocol.py`: MCP固有のデータ構造（モデル情報、リクエスト/レスポンスパラメータなど）をPydanticモデルで定義する（`mcp` が提供する型も活用）。
 -   **エントリーポイント**: CLIに `server` サブコマンドを追加し、`xlsx-value-picker server` コマンドでサーバーを起動できるようにする。
 -   **モデル概念**: 設定ファイル (`config.yaml`) 内の `models` 辞書の各エントリ（キーがモデルID、値がモデル設定）をMCPにおける「モデル」として扱う。
--   **状態管理**: サーバーインスタンス内で、`config_loader` を通じて読み込んだ `AppConfig`（全モデル設定を含む）を保持し、リクエストに応じて適切なモデル設定を利用する。シンプルなシングルトンパターンを採用し、設定ファイルの読み込みと管理を行う。
 
-    ```python
-    # シンプルな状態管理の例
-    class MCPServerState:
-        _instance = None
-        
-        @classmethod
-        def get_instance(cls, config_path=None):
-            if cls._instance is None and config_path:
-                cls._instance = cls(config_path)
-            return cls._instance
-        
-        def __init__(self, config_path: str):
-            self.config_path = config_path
-            self.app_config = None
-            self.load_config()
-        
-        def load_config(self):
-            # 設定ファイルを読み込み、AppConfigインスタンスを作成
-            config_loader = ConfigLoader()
-            self.app_config = config_loader.load_config(self.config_path)
-    ```
--   **バリデーション連携**: 既存のバリデーション機能と連携し、`$/getDiagnostics` でバリデーション結果を提供し、`$/getFileContent` ではバリデーション通過状況を考慮した出力を行う。
+-   **バリデーション連携**: 既存のバリデーション機能と連携し、`getDiagnostics` でバリデーション結果を提供し、`getFileContent` ではバリデーション通過状況を考慮した出力を行う。
 
 ## 5. 実装タスク
 
-1.  **依存関係追加**: `pyproject.toml` に **`mcp`** を追加し、`uv add mcp[cli]` を実行する。
+1.  **依存関係追加**: `uv add mcp[cli]` を実行する。(`pyproject.toml` に **`mcp`** を追加)
 2.  **設定ファイル構造変更**:
-    - `src/xlsx_value_picker/config_loader.py` のPydanticモデルを修正し、提案された複数モデル対応構造（`AppConfig` と `ModelConfig`）を実装する。
+    - `src/xlsx_value_picker/config_loader.py` のPydanticモデルを修正し、提案された複数モデル対応構造（`MCPConfig`など）を実装する。
     - `load_config` 関数を修正し、新しい構造のYAMLファイルを読み込めるようにする。
     - 既存のテスト (`test/test_config_loader.py`) を修正し、新しい設定構造に対応させる。
     - `test/data/config.yaml` を新しい構造に合わせて更新する。
-    - 既存の`ConfigModel`クラスを`ModelConfig`に改名するか、または新しいクラスを作成するかを検討する。
-    - 後方互換性を維持するための移行戦略を検討し、必要に応じて設定ファイル変換ユーティリティを提供する。
 3.  **ディレクトリ/ファイル作成**: `src/xlsx_value_picker/mcp_server/` ディレクトリと、その配下に `__init__.py`, `server.py`, `handlers.py`, `protocol.py` を作成する。
 4.  **CLIサブコマンド追加**: `src/xlsx_value_picker/cli.py` を修正し、`server` サブコマンドを追加する。このサブコマンドは `mcp_server.server` モジュールの起動関数を呼び出す。
-5.  **サーバー基盤実装 (`server.py`)**: **`mcp`** を用いて基本的なサーバープロセスを実装し、stdioを介してリクエストを待ち受ける処理を記述する。MCP Python SDKの標準的な使用方法に従い、以下のような実装を検討する：
+5.  **サーバー基盤実装 (`server.py`)**: **`mcp`** を用いて基本的なサーバープロセスを実装し、stdioを介してリクエストを待ち受ける処理を記述する。MCPConfigクラスから生成したFastMCPインスタンスをもとに以下のように起動することを検討する。
 
-    ```python
-    # server.py
-    import logging
-    from mcp.server.fastmcp import FastMCP
-    from mcp.transports.stdio import StdioTransport
+```python
+from app.mcp import MCPConfig # パッケージの配置は要検討
 
-    def create_server():
-        # サーバーの作成
-        server = FastMCP("xlsx-value-picker")
-        
-        # ロギング設定
-        logging.basicConfig(
-            level=logging.INFO,
-            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-            handlers=[logging.StreamHandler()]
-        )
-        
-        return server
+# 引数はClickライブラリを用いて適切にパースおよびデフォルト値の設定を行う
+def main(config_path: str = "config.yaml"):
+    # JSONライブラリやPyYAMLライブラリなどから設定を読み込み、
+    # MCPConfigインスタンスを生成
+    raw_config_data = load_mcp_config(config_path)
+    mcp_config = MCPConfig.validate_model(raw_config_data) 
+    
+    # サーバーの作成
+    server = mcp_config.configure()
+    server.run() # デフォルトでstdioトランスポートで起動するため特に引数の指定は不要。
 
-    def main(config_path: str = "config.yaml"):
-        """CLIエントリーポイント"""
-        # サーバーの状態を初期化
-        from .state import MCPServerState
-        state = MCPServerState(config_path)
-        
-        # サーバーの作成
-        server = create_server()
-        
-        # ハンドラーの登録
-        from .handlers import register_handlers
-        register_handlers(server, state)
-        
-        # stdioトランスポートでサーバーを起動
-        server.serve(StdioTransport())
+if __name__ == "__main__":
+    main()
+```
 
-    if __name__ == "__main__":
-        main()
-    ```
-
-    また、ハンドラー登録用の関数を以下のように実装する：
-
-    ```python
-    # handlers.py
-    def register_handlers(server, state):
-        """サーバーにハンドラーを登録する"""
-        
-        @server.method("$/listModels")
-        def handle_list_models(params):
-            """利用可能なモデルのリストを返す"""
-            return {"models": list(state.app_config.models.keys())}
-        
-        @server.method("$/getModelInfo")
-        def handle_get_model_info(params):
-            """指定されたモデルの情報を返す"""
-            model_id = params.get("model_id")
-            if not model_id:
-                raise ValueError("model_id パラメータが必要です")
-            
-            model_config = state.app_config.models.get(model_id)
-            if not model_config:
-                raise ValueError(f"モデルが見つかりません: {model_id}")
-            
-            return {
-                "model_id": model_id,
-                "excel_file_path": model_config.excel_file_path,
-                "sheet_name": model_config.sheet_name,
-                "fields": model_config.fields,
-                "rules_count": len(model_config.rules)
-            }
-        
-        @server.method("$/getDiagnostics")
-        def handle_get_diagnostics(params):
-            """指定されたモデルのバリデーション結果を返す"""
-            model_id = params.get("model_id")
-            if not model_id:
-                raise ValueError("model_id パラメータが必要です")
-            
-            model_config = state.app_config.models.get(model_id)
-            if not model_config:
-                raise ValueError(f"モデルが見つかりません: {model_id}")
-            
-            from ..validation import ValidationEngine
-            validation_engine = ValidationEngine(model_config.rules)
-            validation_results = validation_engine.validate(
-                model_config.excel_file_path,
-                model_config.fields
-            )
-            
-            return {
-                "diagnostics": [
-                    {
-                        "message": result.error_message,
-                        "fields": result.error_fields,
-                        "locations": result.error_locations,
-                        "rule": result.rule_name,
-                        "severity": result.severity
-                    }
-                    for result in validation_results
-                ],
-                "is_valid": len(validation_results) == 0
-            }
-        
-        @server.method("$/getFileContent")
-        def handle_get_file_content(params):
-            """指定されたモデルに基づいてExcelファイルの内容を構造化テキストとして提供する"""
-            model_id = params.get("model_id")
-            if not model_id:
-                raise ValueError("model_id パラメータが必要です")
-            
-            model_config = state.app_config.models.get(model_id)
-            if not model_config:
-                raise ValueError(f"モデルが見つかりません: {model_id}")
-            
-            # バリデーション実行（必要に応じて）
-            validation_results = []
-            if model_config.rules and not params.get("skip_validation", False):
-                from ..validation import ValidationEngine
-                validation_engine = ValidationEngine(model_config.rules)
-                validation_results = validation_engine.validate(
-                    model_config.excel_file_path,
-                    model_config.fields
-                )
-            
-            # バリデーションエラーがある場合
-            if validation_results and not params.get("ignore_validation", False):
-                return {
-                    "validation_errors": [
-                        {
-                            "message": result.error_message,
-                            "fields": result.error_fields,
-                            "locations": result.error_locations,
-                            "rule": result.rule_name
-                        }
-                        for result in validation_results
-                    ],
-                    "content": None,
-                    "format": model_config.output.format
-                }
-            
-            # Excelファイルからデータ抽出
-            from ..excel_processor import ExcelValueExtractor
-            with ExcelValueExtractor(model_config.excel_file_path) as extractor:
-                data = extractor.extract_values(model_config)
-            
-            # 出力フォーマット処理
-            from ..output_formatter import OutputFormatter
-            formatter = OutputFormatter(model_config)
-            formatted_output = formatter.format_output(data)
-            
-            return {
-                "content": formatted_output,
-                "format": model_config.output.format,
-                "metadata": {
-                    "source": model_config.excel_file_path,
-                    "model_id": model_id,
-                    "validation_status": "valid" if not validation_results else "warning"
-                }
-            }
-    ```
-6.  **MCPプロトコル定義 (`protocol.py`)**: 
-    - `$/listModels`, `$/getModelInfo`, `$/getDiagnostics`, `$/getFileContent` で使用するリクエスト/レスポンスのパラメータ構造をPydanticモデルで定義する（`mcp` の型定義も活用）。
-7.  **ハンドラー実装 (`handlers.py`)**:
+1.  **MCPプロトコル定義 (`protocol.py`)**: 
+    - `listModels`, `getModelInfo`, `getDiagnostics`, `getFileContent` で使用するリクエスト/レスポンスのパラメータ構造をPydanticモデルで定義する（`mcp` の型定義も活用）。
+2.  **ハンドラー実装 (`handlers.py`)**:
     -   `handle_list_models`: 読み込んだ `AppConfig` からモデルIDのリストを生成して返す。
     -   `handle_get_model_info`: 指定されたモデルIDに対応する `ModelConfig` 情報を返す。
     -   `handle_get_diagnostics`: 指定されたモデルIDに対応する設定とExcelファイルに対して `validation` モジュールを実行し、結果を返す。
     -   `handle_get_file_content`: 指定されたモデルIDに基づき、`excel_processor` を実行して構造化テキストを生成して返す。バリデーション結果を考慮し、問題がある場合は適切なエラーを返す。
-8.  **ハンドラー登録 (`server.py`)**: 実装したハンドラー関数を **`mcp`** のサーバーインスタンスに登録する。
-9.  **ロギング設定**: Python標準の `logging` モジュールを設定し、サーバーの動作ログを標準エラー出力などに出力するようにする。
-10. **テストコード作成**:
+3.  **ハンドラー登録 (`server.py`)**: 実装したハンドラー関数を **`mcp`** のサーバーインスタンスに登録する。
+4.  **ロギング設定**: Python標準の `logging` モジュールを設定し、サーバーの動作ログを標準エラー出力などに出力するようにする。
+5.  **テストコード作成**:
     -   `test/test_mcp_server.py` を作成し、各ハンドラーのユニットテストを実装する。モックを使用して依存コンポーネント（`config_loader`, `excel_processor`, `validation` など）を分離する。
     -   **`mcp` のクライアント機能** を利用して、stdio を介したMCP通信の結合テストを実装する。これにより、JSON-RPCレベルの詳細を意識せず、MCPプロトコルレベルでのテストを簡潔に記述する。
-11. **テスト実行**: `pytest` を実行し、新規追加分を含むすべてのテストが成功することを確認する。
-12. **生成AI連携検証**: 主要な生成AIプラットフォーム（またはMCPクライアント）との連携動作を検証し、必要に応じて出力形式やプロトコル実装を調整する。
+6.  **テスト実行**: `pytest` を実行し、新規追加分を含むすべてのテストが成功することを確認する。
+7.  **生成AI連携検証**: 主要な生成AIプラットフォーム（またはMCPクライアント）との連携動作を検証し、必要に応じて出力形式やプロトコル実装を調整する。
 
 ## 6. 既存文書の改訂方針
 
