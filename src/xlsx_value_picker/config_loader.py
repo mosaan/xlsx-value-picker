@@ -49,10 +49,12 @@ class ConfigParser:
                 else:
                     # ValueError の代わりに ConfigLoadError を送出
                     raise ConfigLoadError(f"サポートされていないファイル形式です: {file_path}")
-        except (yaml.YAMLError, json.JSONDecodeError) as e:
-            raise ConfigLoadError(f"設定ファイルのパースに失敗しました: {file_path} - {e}")
+        except (yaml.YAMLError, json.JSONDecodeError) as e:  # yaml.parser.ParserError は yaml.YAMLError に含まれる
+            print(f"DEBUG: Caught exception type: {type(e)}") # デバッグ出力追加
+            print(f"DEBUG: Exception message: {e}")          # デバッグ出力追加
+            raise ConfigLoadError(f"設定ファイルのパースに失敗しました: {file_path}") from e
         except Exception as e:  # その他の予期せぬ読み込みエラー
-            raise ConfigLoadError(f"設定ファイルの読み込み中に予期せぬエラーが発生しました: {file_path} - {e}")
+            raise ConfigLoadError(f"設定ファイルの読み込み中に予期せぬエラーが発生しました: {file_path}") from e
 
 
 # SchemaValidator クラスは削除 (JSONスキーマ検証は Pydantic に一本化)
