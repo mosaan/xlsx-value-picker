@@ -4,7 +4,7 @@ pytest fixtures for validation tests.
 
 import pytest
 
-from xlsx_value_picker.validation_common import ValidationContext
+from xlsx_value_picker.validator.validation_common import ValidationContext
 
 
 @pytest.fixture

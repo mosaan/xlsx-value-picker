@@ -54,9 +54,10 @@
 1. **test_config_parser_yaml** - YAMLファイルの読み込みテスト
 2. **test_config_parser_json** - JSONファイルの読み込みテスト
 3. **test_config_parser_invalid_extension** - 不正な拡張子のファイル読み込みテスト
-4. **test_schema_validator_valid** - 正常な設定ファイルの検証テスト
-5. **test_schema_validator_invalid** - 不正な設定ファイルの検証テスト
-6. **test_config_model_valid** - 正常なデータでのモデル検証テスト
+# test_schema_validator_* は削除
+# 4. **test_schema_validator_valid** - 正常な設定ファイルの検証テスト
+# 5. **test_schema_validator_invalid** - 不正な設定ファイルの検証テスト
+4. **test_config_model_valid** - 正常なデータでのモデル検証テスト
 7. **test_config_model_invalid** - 不正なデータでのモデル検証テスト
 8. **test_expression_models** - 各種式モデルのテスト
 9. **test_config_loader_integration** - 設定ローダーの統合テスト
@@ -85,8 +86,8 @@
 2. **test_cli_invalid_config** - 無効な設定ファイルでのCLI実行テスト
 3. **test_cli_output_to_file** - ファイル出力オプションテスト
 4. **test_cli_output_to_stdout** - 標準出力オプションテスト
-5. **test_cli_schema_option** - スキーマオプションテスト
-6. **test_cli_include_empty_cells** - 空セルオプションテスト
+# 5. **test_cli_schema_option** - スキーマオプションテスト (削除)
+5. **test_cli_include_empty_cells** - 空セルオプションテスト
 
 ## 6. テスト実行方法
 

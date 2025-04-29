@@ -72,8 +72,8 @@
     *   `test/test_config_loader.py` の Pydantic バリデーションエラーに関するアサーションを修正。
     *   `uv run pytest` を再実行。テストが複数失敗。原因は `test_cli_integration.py` のデフォルトスキーマパス解決問題と判明。
     *   ユーザー指示により、現状を作業計画に反映。
-    *   `test/test_cli_integration.py` のデフォルトスキーマに依存するテストケースに `--schema` オプションを明示的に追加。
-    *   `src/xlsx_value_picker/cli.py` のエラーハンドリングを修正し、`ConfigLoader` 初期化時と `load_config` 呼び出し時のエラーを分離。スキーマ読み込みエラーは常に致命的エラーとして扱うように変更。
+    # *   `test/test_cli_integration.py` のデフォルトスキーマに依存するテストケースに `--schema` オプションを明示的に追加。(削除)
+    *   `src/xlsx_value_picker/cli.py` のエラーハンドリングを修正し、`ConfigLoader` 初期化時と `load_config` 呼び出し時のエラーを分離。# スキーマ読み込みエラーは常に致命的エラーとして扱うように変更。(スキーマ読み込み自体がなくなったため修正)
     *   `test/test_cli_integration.py` の `test_invalid_config`, `test_nonexistent_config`, `test_ignore_errors` のアサーションを `cli.py` の修正に合わせて更新。
     *   `uv run pytest` を再実行。すべてのテストが成功。
 

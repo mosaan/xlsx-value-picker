@@ -8,7 +8,7 @@ from xlsx_value_picker.config_loader import Rule  # Rule は config_loader に�
 from xlsx_value_picker.validation import ValidationEngine
 
 # Expression関連は validation_expressions からインポート
-from xlsx_value_picker.validation_expressions import CompareExpression, RegexMatchExpression
+from xlsx_value_picker.validator.validation_expressions import CompareExpression, RegexMatchExpression
 
 
 @patch("xlsx_value_picker.excel_processor.get_excel_values")
@@ -17,7 +17,7 @@ def test_validate(mock_get_excel_values):
 
     rule1 = Rule(
         name="年齢チェック",
-        expression=CompareExpression(compare={"left": "age", "operator": ">=", "right": 20}),
+        expression=CompareExpression(compare={"left_field": "age", "operator": ">=", "right": 20}),
         error_message="{field}は20以上である必要があります",
     )
     rule2 = Rule(

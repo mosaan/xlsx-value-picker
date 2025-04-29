@@ -2,7 +2,7 @@
 ValidationContextのテスト（pytestスタイル）
 """
 
-from xlsx_value_picker.validation_common import ValidationContext
+from xlsx_value_picker.validator.validation_common import ValidationContext
 
 
 class TestValidationContext:

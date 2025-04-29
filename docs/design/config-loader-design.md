@@ -35,8 +35,9 @@ output:  # 出力設定
 ```
 
 ## 3. JSONスキーマによる検証
-
-設定ファイルは`rule-schema.json`に定義されたJSONスキーマに基づいて検証されます。このスキーマは、設定ファイルの構造を定義し、必須フィールドやフィールドの型などを規定します。
+# スキーマ検証に関する記述を削除 (Pydanticに一本化)
+# 設定ファイルは`rule-schema.json`に定義されたJSONスキーマに基づいて検証されます。このスキーマは、設定ファイルの構造を定義し、必須フィールドやフィールドの型などを規定します。
+設定ファイルの検証は、Pydanticモデル (`ConfigModel`) によって行われます。これにより、設定ファイルの構造、必須フィールド、フィールドの型などが検証されます。
 
 ## 4. 設定データ読み込み機能のアーキテクチャ
 
@@ -51,22 +52,22 @@ flowchart TD
     
     %% ファイル・データ要素
     config[("設定ファイル<br>(YAML/JSON形式)")]:::fileStyle
-    jsonschema[("JSONスキーマ<br>定義ファイル")]:::fileStyle
-    
+    # jsonschema は削除
+
     %% 処理コンポーネント要素
     parser[設定ファイル<br>パーサー]:::processStyle
-    validator[JSONスキーマ<br>バリデーター]:::processStyle
+    # validator は削除
     factory[ルール<br>ファクトリー]:::processStyle
-    
+
     %% モデル要素
-    config_model[設定モデル<br>オブジェクト]:::modelStyle
+    config_model[設定モデル<br>オブジェクト<br>(Pydantic検証)]:::modelStyle # Pydantic検証に一本化
     rules_model[ルール<br>オブジェクト]:::modelStyle
-    
+
     %% フロー
     config --> parser
-    jsonschema --> validator
-    parser --> validator
-    validator --> config_model
+    # jsonschema --> validator # 削除
+    parser -- パース済みデータ --> config_model # validator を経由しない
+    # validator --> config_model # 削除
     config_model --> factory
     factory --> rules_model
 ```
@@ -93,26 +94,9 @@ class ConfigParser:
                 raise ValueError(f"サポートされていないファイル形式です: {file_path}")
 ```
 
-### 5.2 JSONスキーマバリデーター（SchemaValidator）
+### 5.2 JSONスキーマバリデーター（SchemaValidator） # 削除
 
-JSONスキーマを使用して、設定ファイルの内容を検証します。
-
-```python
-class SchemaValidator:
-    def __init__(self, schema_path: str):
-        """スキーマファイルを読み込む"""
-        with open(schema_path, 'r', encoding='utf-8') as f:
-            import json
-            self.schema = json.load(f)
-    
-    def validate(self, config_data: dict) -> None:
-        """設定データをスキーマに基づいて検証する"""
-        import jsonschema
-        try:
-            jsonschema.validate(instance=config_data, schema=self.schema)
-        except jsonschema.exceptions.ValidationError as e:
-            raise ConfigValidationError(f"設定ファイルの検証に失敗しました: {e}")
-```
+# JSONスキーマバリデーターは削除されました。検証はPydanticモデルで行われます。
 
 ### 5.3 設定モデル（ConfigModel）
 
@@ -199,34 +183,33 @@ class RuleFactory:
 上記のコンポーネントを統合し、設定ファイルからモデルオブジェクトとルールオブジェクトを生成します。
 
 ```python
+from pydantic import ValidationError as PydanticValidationError # インポート追加
+
 class ConfigLoader:
-    def __init__(self, schema_path: str = None):
+    def __init__(self): # schema_path 引数を削除
         """初期化"""
-        self.schema_path = schema_path or os.path.join(os.path.dirname(__file__), "rule-schema.json")
-        self.validator = SchemaValidator(self.schema_path)
-    
+        # スキーマバリデーターの初期化は不要
+        pass
+
     def load_config(self, config_path: str) -> ConfigModel:
         """設定ファイルを読み込み、モデルオブジェクトを返す"""
-        # 設定ファイルのパース
+        # 1. ファイルのパース
         config_data = ConfigParser.parse_file(config_path)
-        
-        # JSONスキーマによる検証
-        self.validator.validate(config_data)
-        
-        # モデルオブジェクトの生成
-        return ConfigModel.model_validate(config_data)
-    
-    def load_rules(self, config_path: str) -> List[ValidationRule]:
-        """設定ファイルを読み込み、ルールオブジェクトのリストを返す"""
-        config_model = self.load_config(config_path)
-        
-        # ルールオブジェクトの生成
-        rules = []
-        for rule_model in config_model.rules:
-            rule = RuleFactory.create_rule(rule_model)
-            rules.append(rule)
-        
-        return rules
+
+        # 2. JSONスキーマによる検証は削除
+
+        # 3. Pydanticモデルによる検証とオブジェクト生成
+        try:
+            model = ConfigModel.model_validate(config_data)
+            return model
+        except PydanticValidationError as e:
+            # PydanticのエラーをConfigValidationErrorにラップ
+            error_details = "; ".join([f"{err['loc']}: {err['msg']}" for err in e.errors()])
+            raise ConfigValidationError(f"設定ファイルのモデル検証に失敗しました: {error_details}") from e
+
+    # load_rules メソッドはバリデーションエンジン側に責務が移譲されたため削除
+    # def load_rules(self, config_path: str) -> List[ValidationRule]:
+    #     ...
 ```
 
 ## 6. 実装方針

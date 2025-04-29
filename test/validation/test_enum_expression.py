@@ -5,7 +5,7 @@ EnumExpressionのpytestテスト
 import pytest
 
 # Expression関連は validation_expressions からインポート
-from xlsx_value_picker.validation_expressions import EnumExpression
+from xlsx_value_picker.validator.validation_expressions import EnumExpression
 
 # Remove the context fixture, it's now in conftest.py
 
@@ -37,7 +37,7 @@ def test_enum_expression(validation_context, field, values, expected_valid, test
         validation_context.cell_values[field] = test_value_override
 
     expr = EnumExpression(enum={"field": field, "values": values})
-    result = expr.validate(validation_context, "{field}に無効な値が指定されています: {value}")
+    result = expr.validate_in(validation_context, "{field}に無効な値が指定されています: {value}")
 
     assert result.is_valid == expected_valid
     if not expected_valid:

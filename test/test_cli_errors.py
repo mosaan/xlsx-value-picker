@@ -253,19 +253,19 @@ class TestCLIErrors:
         """無効な設定ファイルでの実行テスト (スキーマ違反)"""
         excel_path = setup_files["excel_path"]
         invalid_config_path = setup_files["invalid_config_path"]
-        schema_path = setup_files["schema_path"]  # スキーマを指定
+        # schema_path = setup_files["schema_path"] # 削除
 
         result = self.run_cli_command(
-            [str(excel_path), "--config", str(invalid_config_path), "--schema", str(schema_path)]
+            [str(excel_path), "--config", str(invalid_config_path)]  # --schema を削除
         )
 
         # 終了コードが1（エラー終了）
         assert result.returncode == 1
         # エラーメッセージに「設定ファイルの検証に失敗しました」が含まれる (cli.pyの修正による変更)
         assert "設定ファイルの検証に失敗しました" in result.stderr
-        # 具体的なスキーマ違反メッセージも確認 (jsonschemaのメッセージに依存)
-        assert "'output' is a required property" in result.stderr  # required 違反
-        # assert "InvalidFormat" in result.stderr # pattern 違反 (jsonschema は最初の違反で止まることがある)
+        # Pydantic の検証エラーメッセージを確認
+        assert "無効なセル参照形式です" in result.stderr
+        assert "InvalidFormat" in result.stderr
 
     def test_nonexistent_excel(self, setup_files):
         """存在しないExcelファイルでの実行テスト"""
@@ -281,10 +281,10 @@ class TestCLIErrors:
     def test_nonexistent_config(self, setup_files):
         """存在しない設定ファイルでの実行テスト"""
         excel_path = setup_files["excel_path"]
-        schema_path = setup_files["schema_path"]  # スキーマを明示的に指定
+        # schema_path = setup_files["schema_path"] # 削除
 
         result = self.run_cli_command(
-            [str(excel_path), "--config", "nonexistent_config.yaml", "--schema", str(schema_path)]
+            [str(excel_path), "--config", "nonexistent_config.yaml"]  # --schema を削除
         )
 
         # 終了コードが1（エラー終了）

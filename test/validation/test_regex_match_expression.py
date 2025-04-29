@@ -5,7 +5,7 @@ RegexMatchExpressionのpytestテスト
 import pytest
 
 # Expression関連は validation_expressions からインポート
-from xlsx_value_picker.validation_expressions import RegexMatchExpression
+from xlsx_value_picker.validator.validation_expressions import RegexMatchExpression
 
 # Remove the context fixture, it's now in conftest.py
 
@@ -33,7 +33,7 @@ def test_regex_match_expression(validation_context, field, pattern, expected_val
         validation_context.cell_values[field] = test_value_override
 
     expr = RegexMatchExpression(regex_match={"field": field, "pattern": pattern})
-    result = expr.validate(validation_context, "{field}のフォーマットが不正です")
+    result = expr.validate_in(validation_context, "{field}のフォーマットが不正です")
 
     assert result.is_valid == expected_valid
     if not expected_valid:

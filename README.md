@@ -34,7 +34,6 @@ xlsx-value-picker [オプション] <Excelファイル>
 - `--log <ログファイル>`: 検証エラーを記録するログファイルを指定します。
 - `--ignore-errors`: 検証エラーが発生しても処理を継続します。
 - `--validate-only`: バリデーションのみを実行し、値の抽出や出力は行いません。
-- `--schema <JSONスキーマファイル>`: JSONスキーマファイルのパスを指定します。
 - `--include-empty-cells`: 空セルも出力に含めます。
 - `--help`: ヘルプ情報を表示します。
 - `--version`: ツールのバージョンを表示します。
@@ -52,14 +51,13 @@ fields:
 rules:
   - name: "必須項目チェック"
     expression:
-      field: "field_name1"
-      required: true
+      required: "field_name1"
     error_message: "{field}は必須項目です"
 
   - name: "値の範囲チェック"
     expression:
       compare:
-        left: "field_name2"
+        left_field: "field_name2"
         operator: ">"
         right: 0
     error_message: "{field}は0より大きい値を入力してください"
@@ -79,17 +77,47 @@ xlsx-value-pickerには強力なバリデーション機能が組み込まれて
 - **必須項目チェック**：`required`
   ```yaml
   expression:
-    field: "user_name"
-    required: true
+    required: "user_name"
+  ```
+  
+  複数フィールドの必須チェックも可能です：
+  ```yaml
+  expression:
+    required:
+      - "user_name"
+      - "email"
+  ```
+
+- **空値チェック**：`is_empty`
+  ```yaml
+  expression:
+    is_empty: "comment"
+  ```
+  
+  複数フィールドに対する空値チェックも可能です：
+  ```yaml
+  expression:
+    is_empty:
+      - "comment"
+      - "additional_info"
   ```
 
 - **値の比較**：`compare`
   ```yaml
   expression:
     compare:
-      left: "quantity"
+      left_field: "quantity"
       operator: ">"  # "==", "!=", ">", ">=", "<", "<="
       right: 0
+  ```
+  
+  または、別のフィールドと比較する場合：
+  ```yaml
+  expression:
+    compare:
+      left_field: "total_price"  # 他のフィールドを参照
+      operator: ">"
+      right_field: "threshold_price"  # 他のフィールドを参照
   ```
 
 - **正規表現マッチ**：`regex_match`
@@ -113,10 +141,9 @@ xlsx-value-pickerには強力なバリデーション機能が組み込まれて
   ```yaml
   expression:
     all_of:
-      - field: "user_name"
-        required: true
+      - required: "user_name"
       - compare:
-          left: "age"
+          left_field: "age"
           operator: ">="
           right: 18
   ```
@@ -126,11 +153,11 @@ xlsx-value-pickerには強力なバリデーション機能が組み込まれて
   expression:
     any_of:
       - compare:
-          left: "payment_method"
+          left_field: "payment_method"
           operator: "=="
           right: "銀行振込"
       - compare:
-          left: "payment_method"
+          left_field: "payment_method"
           operator: "=="
           right: "クレジットカード"
   ```
@@ -140,8 +167,8 @@ xlsx-value-pickerには強力なバリデーション機能が組み込まれて
   expression:
     not:
       compare:
-        left: "status"
-        operator: "=="
+        left_field: "status"
+        operator: "==" # notでラップされているため実質的に"!="に相当
         right: "完了"
   ```
 
@@ -199,14 +226,13 @@ fields:
 rules:
   - name: "商品名必須チェック"
     expression:
-      field: "product_name"
-      required: true
+      required: "product_name"
     error_message: "商品名は必須項目です"
 
   - name: "価格範囲チェック"
     expression:
       compare:
-        left: "price"
+        left_field: "price"
         operator: ">"
         right: 0
     error_message: "価格は0より大きい値を入力してください"
@@ -214,7 +240,7 @@ rules:
   - name: "在庫数チェック"
     expression:
       compare:
-        left: "stock"
+        left_field: "stock"
         operator: ">="
         right: 0
     error_message: "在庫数は0以上の値を入力してください"
@@ -232,6 +258,11 @@ rules:
         field: "category"
         values: ["A", "B", "C"]
     error_message: "カテゴリは A, B, C のいずれかを指定してください"
+
+  - name: "コメント空値チェック"
+    expression:
+      is_empty: "comment"
+    error_message: "コメントが入力されていません"
 
 # 出力形式設定
 output:

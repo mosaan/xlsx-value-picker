@@ -23,9 +23,9 @@ class ExcelValueExtractor:
             excel_path: Excelファイルのパス
         """
         self.excel_path = Path(excel_path)
-        self.workbook = None  # Initialize workbook to None
+        self.workbook: openpyxl.Workbook | None = None  # Initialize workbook to None
 
-    def __enter__(self):
+    def __enter__(self) -> "ExcelValueExtractor":
         """コンテキストマネージャの開始時にExcelファイルを開く"""
         if not self.excel_path.exists():
             raise ExcelProcessingError(f"Excelファイルが見つかりません: {self.excel_path}")
@@ -40,7 +40,7 @@ class ExcelValueExtractor:
                 f"Excelファイルの読み込み中に予期せぬエラーが発生しました: {self.excel_path} - {e}"
             )
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         """コンテキストマネージャの終了時にワークブックを閉じる"""
         self.close()
 
@@ -110,7 +110,7 @@ class ExcelValueExtractor:
         except (ValueError, KeyError):
             raise ExcelProcessingError(f"無効なセル参照です: {cell_addr}")
 
-    def close(self):
+    def close(self) -> None:
         """ワークブックを閉じる"""
         if self.workbook:
             self.workbook.close()
