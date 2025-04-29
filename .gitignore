@@ -13,5 +13,5 @@ wheels/
 tmp
 .pytest_cache/
 *.xlsx
-*.yaml
+# *.yaml
 .env

@@ -1,0 +1,6 @@
+models:
+  - model_name: invalid_model
+    config: ./invalid_model_config.yaml
+    description: "An invalid model configuration for testing"
+config:
+  # Missing tool_descriptions

@@ -1,0 +1,10 @@
+models:
+  - model_name: test_model
+    config: ./data/config_minimal.yaml
+    description: "Test model configuration"
+config:
+  tool_descriptions:
+    listModels: "List available models"
+    getModelInfo: "Get model information"
+    getDiagnostics: "Get validation results"
+    getFileContent: "Get structured text from Excel file"

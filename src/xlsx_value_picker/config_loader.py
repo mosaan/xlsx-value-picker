@@ -4,6 +4,8 @@ JSONスキーマに基づく設定データ読み込み機能
 
 import json
 import os
+from abc import ABC, abstractmethod
+from pathlib import Path
 from typing import Any, Literal, Self, Union, cast
 
 import yaml
@@ -136,7 +138,7 @@ class ConfigModel(BaseModel):
     """設定ファイルのモデル"""
 
     fields: dict[str, str]
-    rules: list[Rule]
+    rules: list[Rule] = []
     output: OutputFormat = Field(default_factory=OutputFormat)
 
     @field_validator("fields")
@@ -229,6 +231,7 @@ class ConfigLoader:
 
             # MCPConfigモデルオブジェクトの生成
             mcp_config = MCPConfig.model_validate(config_data)
+            mcp_config.origin = Path(config_path).absolute()
             return mcp_config
 
         except ConfigLoadError as e:
@@ -248,27 +251,113 @@ ConfigModel.model_rebuild()
 MCPサーバー設定関連クラス
 """
 
+
+class MCPAvailableConfigModel(ConfigModel):
+    """MCPサーバ設定用に追加項目を付与して拡張したモデル"""
+
+    model_name: str | None = None
+    model_description: str | None = None
+
+
 type ToolNames = Literal["listModels", "getModelInfo", "getDiagnostics", "getFileContent"]
 
 
 class MCPConfig(BaseModel):
     models: list[Union["ModelConfigReference", "GlobModelConfigReference"]]
     config: "MCPConfigDetails"
+    origin: Path | None = None
+    # 以降内部用フィールド
+    loaded_models: list[MCPAvailableConfigModel] = Field(default=[], exclude=True)
 
-    def configure(self) -> "FastMCP":
+    def cache_models(self):
+        """モデル一覧をパースしてモデル設定をキャッシュする"""
+        # モデル設定をロード
+        self.loaded_models: list[MCPAvailableConfigModel] = [
+            model for definition in self.models for model in definition.get_models(self)
+        ]
+
+    def handle_list_models(self) -> str:
+        """モデル情報を取得するためのハンドラー"""
+        # モデル情報を取得
+        simplified_models = [
+            f"Model Name: {model.model_name}. Description: {model.model_description}" for model in self.loaded_models
+        ]
+        return "\n".join(simplified_models)
+
+    def configure(self) -> FastMCP:
         """設定内容に基づいてFastMCPサーバのインスタンスを構築して返す"""
-        # サーバ設定処理を実装
-        pass
+        self.cache_models()
+
+        # FastMCP サーバーを構築
+        server = FastMCP()
+
+        # ハンドラーを登録
+        server.add_tool(
+            name="listModels",
+            fn=self.handle_list_models,
+            description="""
+supply summarized list of parsable Excel file informations with `getFileContent` tool.
+
+""",
+        )
+        # server.add_tool(
+        #     name="getModelInfo",
+        #     fn=self.handle_get_model_info,
+        #     description="get detailed information about specified Excel file ",
+        # )
+        # server.add_tool(name="getDiagnostics", fn=self.handle_get_diagnostics)
+        # server.add_tool(name="getFileContent", fn=self.handle_get_file_content)
+
+        return server
 
 
-class ModelConfigReference(BaseModel):
+class IModelReferences(ABC):
+    """モデル設定を表すインターフェース"""
+
+    @abstractmethod
+    def get_models(self, context: MCPConfig) -> list[MCPAvailableConfigModel]:
+        """モデル設定を取得する"""
+        raise NotImplementedError("get_models メソッドは実装されていません")
+
+
+class ModelConfigReference(BaseModel, IModelReferences):
     config_path: str = Field(..., alias="config")
     model_name: str | None = None
     model_description: str | None = None
 
+    def get_models(self, context: MCPConfig) -> list[MCPAvailableConfigModel]:
+        """モデル設定を取得する"""
+        path = Path(self.config_path)
+        # パス表記が絶対パスでない場合はMCP設定ファイルの親フォルダからの相対パスとして解釈する
+        if not path.is_absolute():
+            path = context.origin.parent / path
+        # 設定ファイルを読み込む
+        config = ConfigParser.parse_file(str(path))
 
-class GlobModelConfigReference(BaseModel):
+        # モデル名と説明をMCP設定ファイルの内容で上書き
+        if self.model_name:
+            config["model_name"] = self.model_name
+        if self.model_description:
+            config["model_description"] = self.model_description
+
+        return [MCPAvailableConfigModel.model_validate(config)]
+
+
+class GlobModelConfigReference(BaseModel, IModelReferences):
     config_path_pattern: str
+
+    def get_models(self, context: MCPConfig) -> list[MCPAvailableConfigModel]:
+        """モデル設定を取得する"""
+        # glob パターンを展開してモデル設定を取得
+        # import glob
+
+        # models = []
+        # for path in glob.glob(self.config_path_pattern):
+        #     model_ref = ModelConfigReference(config_path=path)
+        #     models.extend(model_ref.get_models())
+
+        # return models
+        raise NotImplementedError("メソッドは実装されていません")
 
 
 class MCPConfigDetails(BaseModel):
