@@ -48,7 +48,7 @@ def create_valid_config_yaml(path, excel_path):
         "rules": [
             {
                 "name": "テストルール",
-                "expression": {"field": "value1", "required": True},
+                "expression": {"required": "value1"},  # 新形式のRequiredExpression
                 "error_message": "値1は必須です",
             }
         ],
@@ -65,7 +65,7 @@ def create_valid_config_json(path, excel_path):
         "rules": [
             {
                 "name": "テストルール",
-                "expression": {"field": "value1", "required": True},
+                "expression": {"required": "value1"},  # 新形式のRequiredExpression
                 "error_message": "値1は必須です",
             }
         ],
@@ -100,15 +100,15 @@ def create_config_with_validation_yaml(path):
             },
             {
                 "name": "年齢チェック",
-                "expression": {"compare": {"left": "age", "operator": ">=", "right": 18}},
+                "expression": {"compare": {"left_field": "age", "operator": ">=", "right": 18}},
                 "error_message": "{field}は18歳以上である必要があります（現在: {left_value}歳）",
             },
             {
                 "name": "その他選択時コメント必須",
                 "expression": {
                     "any_of": [
-                        {"compare": {"left": "selection", "operator": "!=", "right": "その他"}},
-                        {"field": "comment", "required": True},
+                        {"compare": {"left_field": "selection", "operator": "!=", "right": "その他"}},
+                        {"required": "comment"},  # 新形式のRequiredExpression
                     ]
                 },
                 "error_message": "「その他」を選択した場合はコメントが必須です",
@@ -137,15 +137,15 @@ def create_config_with_failing_validation_yaml(path):
             },
             {
                 "name": "年齢チェック",
-                "expression": {"compare": {"left": "age", "operator": ">=", "right": 18}},
+                "expression": {"compare": {"left_field": "age", "operator": ">=", "right": 18}},
                 "error_message": "{field}は18歳以上である必要があります（現在: {left_value}歳）",
             },
             {
                 "name": "その他選択時コメント必須",
                 "expression": {
                     "any_of": [
-                        {"compare": {"left": "selection", "operator": "!=", "right": "その他"}},
-                        {"field": "comment", "required": True},
+                        {"compare": {"left_field": "selection", "operator": "!=", "right": "その他"}},
+                        {"required": "comment"},  # 新形式のRequiredExpression
                     ]
                 },
                 "error_message": "「その他」を選択した場合はコメントが必須です",
@@ -253,10 +253,10 @@ class TestCLIValidation:
         """バリデーション成功時のテスト"""
         excel_path = setup_files["excel_path"]
         validation_config_path = setup_files["validation_config_path"]
-        schema_path = setup_files["schema_path"]  # スキーマを明示的に指定
+        # schema_path = setup_files["schema_path"] # 削除
 
         result = self.run_cli_command(
-            [str(excel_path), "--config", str(validation_config_path), "--schema", str(schema_path)]
+            [str(excel_path), "--config", str(validation_config_path)]  # --schema を削除
         )
 
         # 終了コードが0（正常終了）
@@ -273,10 +273,10 @@ class TestCLIValidation:
         """バリデーション失敗時のテスト"""
         excel_path = setup_files["excel_path"]
         failing_validation_config_path = setup_files["failing_validation_config_path"]
-        schema_path = setup_files["schema_path"]  # スキーマを明示的に指定
+        # schema_path = setup_files["schema_path"] # 削除
 
         result = self.run_cli_command(
-            [str(excel_path), "--config", str(failing_validation_config_path), "--schema", str(schema_path)]
+            [str(excel_path), "--config", str(failing_validation_config_path)]  # --schema を削除
         )
 
         # 終了コードが1（エラー終了）
@@ -294,10 +294,10 @@ class TestCLIValidation:
         """バリデーションのみモード成功時のテスト"""
         excel_path = setup_files["excel_path"]
         validation_config_path = setup_files["validation_config_path"]
-        schema_path = setup_files["schema_path"]  # スキーマを明示的に指定
+        # schema_path = setup_files["schema_path"] # 削除
 
         result = self.run_cli_command(
-            [str(excel_path), "--config", str(validation_config_path), "--schema", str(schema_path), "--validate-only"]
+            [str(excel_path), "--config", str(validation_config_path), "--validate-only"]  # --schema を削除
         )
 
         # 終了コードが0（正常終了）
@@ -311,15 +311,14 @@ class TestCLIValidation:
         """バリデーションのみモード失敗時のテスト"""
         excel_path = setup_files["excel_path"]
         failing_validation_config_path = setup_files["failing_validation_config_path"]
-        schema_path = setup_files["schema_path"]  # スキーマを明示的に指定
+        # schema_path = setup_files["schema_path"] # 削除
 
         result = self.run_cli_command(
             [
                 str(excel_path),
                 "--config",
                 str(failing_validation_config_path),
-                "--schema",
-                str(schema_path),
+                # "--schema", str(schema_path), # 削除
                 "--validate-only",
             ]
         )
@@ -338,15 +337,14 @@ class TestCLIValidation:
         excel_path = setup_files["excel_path"]
         failing_validation_config_path = setup_files["failing_validation_config_path"]
         log_path = setup_files["log_path"]
-        schema_path = setup_files["schema_path"]  # スキーマを明示的に指定
+        # schema_path = setup_files["schema_path"] # 削除
 
         result = self.run_cli_command(
             [
                 str(excel_path),
                 "--config",
                 str(failing_validation_config_path),
-                "--schema",
-                str(schema_path),
+                # "--schema", str(schema_path), # 削除
                 "--log",
                 str(log_path),
             ]
@@ -379,11 +377,11 @@ class TestCLIValidation:
         """バリデーション失敗時のエラー無視オプションテスト"""
         excel_path = setup_files["excel_path"]
         failing_validation_config_path = setup_files["failing_validation_config_path"]
-        schema_path = setup_files["schema_path"]  # スキーマを明示的に指定
+        # schema_path = setup_files["schema_path"] # 削除
 
         # エラー無視なしの場合
         result1 = self.run_cli_command(
-            [str(excel_path), "--config", str(failing_validation_config_path), "--schema", str(schema_path)]
+            [str(excel_path), "--config", str(failing_validation_config_path)]  # --schema を削除
         )
 
         # 終了コードが1（エラー終了）
@@ -395,8 +393,7 @@ class TestCLIValidation:
                 str(excel_path),
                 "--config",
                 str(failing_validation_config_path),
-                "--schema",
-                str(schema_path),
+                # "--schema", str(schema_path), # 削除
                 "--ignore-errors",
             ]
         )

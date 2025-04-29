@@ -2,7 +2,7 @@
 ValidationResultのテスト（pytestスタイル）
 """
 
-from xlsx_value_picker.validation_common import ValidationResult
+from xlsx_value_picker.validator.validation_common import ValidationResult
 
 
 class TestValidationResult:

@@ -5,12 +5,11 @@
 検証するための機能を提供します。
 """
 
-
 # config_loader ではなく validation_common からクラスをインポート
 # 前方参照型を使ってRuleをインポート
 from typing import TYPE_CHECKING
 
-from xlsx_value_picker.validation_common import ValidationContext, ValidationResult
+from xlsx_value_picker.validator.validation_common import ValidationContext, ValidationResult
 
 if TYPE_CHECKING:
     from xlsx_value_picker.config_loader import Rule

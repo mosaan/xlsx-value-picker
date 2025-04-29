@@ -4,25 +4,23 @@ JSONスキーマに基づく設定データ読み込み機能
 
 import json
 import os
-from pathlib import Path  # pathlib をインポート
-from typing import Any, ClassVar
+from typing import Any, Self, cast
 
-import jsonschema
 import yaml
 from pydantic import BaseModel, Field, field_validator, model_validator
 from pydantic import ValidationError as PydanticValidationError
 
 # カスタム例外をインポート
 from .exceptions import ConfigLoadError, ConfigValidationError, XlsxValuePickerError
-from .validation_common import ValidationContext, ValidationResult
-from .validation_expressions import ExpressionType, convert_expression
+from .validator.validation_common import ValidationContext, ValidationResult
+from .validator.validation_expressions import ExpressionType
 
 # ConfigValidationError は exceptions.py に移動済みのため削除
 
 
 class ConfigParser:
     @staticmethod
-    def parse_file(file_path: str) -> dict:
+    def parse_file(file_path: str) -> dict[str, Any]:
         """
         設定ファイル（YAMLまたはJSON）を読み込み、Pythonオブジェクトに変換する
 
@@ -42,9 +40,11 @@ class ConfigParser:
         try:
             with open(file_path, encoding="utf-8") as f:
                 if file_path.endswith(".yaml") or file_path.endswith(".yml"):
-                    return yaml.safe_load(f)
+                    # yaml.safe_load は Any を返すため、cast と ignore を使用
+                    return cast(dict[str, Any], yaml.safe_load(f))
                 elif file_path.endswith(".json"):
-                    return json.load(f)
+                    # json.load は Any を返すため、cast と ignore を使用
+                    return cast(dict[str, Any], json.load(f))
                 else:
                     # ValueError の代わりに ConfigLoadError を送出
                     raise ConfigLoadError(f"サポートされていないファイル形式です: {file_path}")
@@ -54,54 +54,8 @@ class ConfigParser:
             raise ConfigLoadError(f"設定ファイルの読み込み中に予期せぬエラーが発生しました: {file_path} - {e}")
 
 
-class SchemaValidator:
-    """JSONスキーマバリデーター"""
-
-    def __init__(self, schema_path: str):
-        """
-        スキーマファイルを読み込む
-
-        Args:
-            schema_path: JSONスキーマファイルのパス
-
-        Raises:
-            ConfigLoadError: スキーマファイルが見つからない、またはJSONとして不正な場合
-        """
-        if not os.path.exists(schema_path):
-            # FileNotFoundError の代わりに ConfigLoadError を送出
-            raise ConfigLoadError(f"スキーマファイルが見つかりません: {schema_path}")
-
-        try:
-            with open(schema_path, encoding="utf-8") as f:
-                self.schema = json.load(f)
-        except json.JSONDecodeError as e:
-            raise ConfigLoadError(f"スキーマファイルのJSON形式が不正です: {schema_path} - {e}")
-        except Exception as e:
-            raise ConfigLoadError(f"スキーマファイルの読み込み中に予期せぬエラーが発生しました: {schema_path} - {e}")
-
-    def validate(self, config_data: dict) -> None:
-        """
-        設定データをスキーマに基づいて検証する
-
-        Args:
-            config_data: 検証対象の設定データ
-
-        Raises:
-            ConfigValidationError: バリデーションに失敗した場合
-        """
-        try:
-            jsonschema.validate(instance=config_data, schema=self.schema)
-        except jsonschema.exceptions.ValidationError as e:
-            path = ".".join(str(p) for p in e.path) if e.path else "root"
-            # ConfigValidationError を使用
-            raise ConfigValidationError(f"設定ファイルのスキーマ検証に失敗しました: {path} - {e.message}")
-        except Exception as e:  # jsonschema の予期せぬエラー
-            raise ConfigValidationError(f"スキーマ検証中に予期せぬエラーが発生しました: {e}")
-
-
+# SchemaValidator クラスは削除 (JSONスキーマ検証は Pydantic に一本化)
 # バリデーション式関連のコードは validation_expressions.py に移動済み
-
-
 class Rule(BaseModel):
     """バリデーションルール"""
 
@@ -109,16 +63,16 @@ class Rule(BaseModel):
     expression: ExpressionType
     error_message: str
 
-    @model_validator(mode="before")
-    @classmethod
-    def validate_expression(cls, data: dict[str, Any]):
-        """式のデータを適切な型に変換する"""
-        if isinstance(data, dict) and "expression" in data and isinstance(data["expression"], dict):
-            # validation_expressions の convert_expression を使用
-            data["expression"] = convert_expression(data["expression"])
-        return data
+    # @model_validator(mode="before")
+    # @classmethod
+    # def validate_expression(cls, data: dict[str, Any]) -> dict[str, Any]:
+    #     """式のデータを適切な型に変換する"""
+    #     if isinstance(data, dict) and "expression" in data and isinstance(data["expression"], dict):
+    #         # validation_expressions の convert_expression を使用
+    #         data["expression"] = convert_expression(data["expression"])
+    #     return data
 
-    def validate(self, context: ValidationContext) -> ValidationResult:
+    def validate(self, context: ValidationContext) -> ValidationResult:  # type: ignore[override]
         """
         ルールのバリデーションを実行する
 
@@ -129,7 +83,7 @@ class Rule(BaseModel):
             ValidationResult: バリデーション結果
         """
         # 内部の式を評価 (self.expression は ExpressionType)
-        result: ValidationResult = self.expression.validate(context, self.error_message)
+        result: ValidationResult = self.expression.validate_in(context, self.error_message)
 
         # ルール名と場所情報を追加
         if not result.is_valid:
@@ -140,7 +94,7 @@ class Rule(BaseModel):
                     context.get_field_location(f) for f in result.error_fields if context.get_field_location(f)
                 ]
                 result.error_locations = sorted(
-                    set(locations)
+                    {loc for loc in locations if loc is not None}  # 明示的にセット内包表記でフィルタリング
                 )  # Use set to avoid duplicates if expression already added some
 
         return result
@@ -154,7 +108,7 @@ class OutputFormat(BaseModel):
     template: str | None = None
 
     @model_validator(mode="after")
-    def check_jinja2_template(self):
+    def check_jinja2_template(self) -> Self:
         """Jinja2形式の場合はテンプレートが必要"""
         if self.format == "jinja2" and not (self.template_file or self.template):
             raise ValueError("Jinja2出力形式の場合、template_fileまたはtemplateが必要です")
@@ -179,7 +133,7 @@ class ConfigModel(BaseModel):
 
     @field_validator("fields")
     @classmethod
-    def validate_fields(cls, v):
+    def validate_fields(cls: type["ConfigModel"], v: dict[str, str]) -> dict[str, str]:
         """フィールド定義の検証"""
         import re  # re をインポート
 
@@ -197,31 +151,15 @@ class ConfigModel(BaseModel):
 class ConfigLoader:
     """設定ファイルローダー"""
 
-    # 修正: デフォルトスキーマパスの計算方法を変更
-    _BASE_DIR = Path(__file__).resolve().parent.parent  # src ディレクトリを基準とする
-    DEFAULT_SCHEMA_PATH: ClassVar[str] = str(
-        _BASE_DIR.parent / "docs" / "spec" / "rule-schema.json"  # プロジェクトルートからの相対パス
-    )
+    # DEFAULT_SCHEMA_PATH は不要なため削除
 
-    def __init__(self, schema_path: str = None):
+    def __init__(self) -> None:
         """
         初期化
-
-        Args:
-            schema_path: JSONスキーマファイルのパス（None の場合はデフォルトパスを使用）
-
-        Raises:
-            ConfigLoadError: スキーマファイルの読み込みに失敗した場合
+        (スキーマ検証を行わないため、引数は不要)
         """
-        self.schema_path = schema_path or self.DEFAULT_SCHEMA_PATH
-        # print(f"DEBUG: Using schema path: {self.schema_path}") # デバッグ用
-        try:
-            self.validator = SchemaValidator(self.schema_path)
-        except ConfigLoadError as e:  # SchemaValidator からの ConfigLoadError をキャッチ
-            # __init__ で発生したエラーはそのまま送出
-            raise e
-        except Exception as e:  # 予期せぬエラー
-            raise ConfigLoadError(f"スキーマバリデーターの初期化中にエラーが発生しました: {e}")
+        # スキーマバリデーターの初期化は不要
+        pass
 
     def load_config(self, config_path: str) -> ConfigModel:
         """
@@ -241,8 +179,7 @@ class ConfigLoader:
             # 設定ファイルのパース (ConfigLoadError が発生する可能性)
             config_data = ConfigParser.parse_file(config_path)
 
-            # JSONスキーマによる検証 (ConfigValidationError が発生する可能性)
-            self.validator.validate(config_data)
+            # JSONスキーマによる検証は削除
 
             # モデルオブジェクトの生成 (PydanticValidationError が発生する可能性)
             model = ConfigModel.model_validate(config_data)
@@ -251,9 +188,8 @@ class ConfigLoader:
         except ConfigLoadError as e:
             # パース時のエラーはそのまま ConfigLoadError として送出
             raise e
-        except ConfigValidationError as e:
-            # スキーマ検証時のエラーはそのまま ConfigValidationError として送出
-            raise e
+        # except ConfigValidationError as e: # スキーマ検証のエラーハンドリングは削除
+        #     raise e
         except PydanticValidationError as e:
             # Pydantic のバリデーションエラーを ConfigValidationError にラップして送出
             # エラーメッセージを整形して分かりやすくする
@@ -262,3 +198,8 @@ class ConfigLoader:
         except Exception as e:
             # その他の予期せぬエラー
             raise XlsxValuePickerError(f"設定ファイルの処理中に予期せぬエラーが発生しました: {e}") from e
+
+
+# Pydanticモデルの循環参照を解決するために再構築
+Rule.model_rebuild()
+ConfigModel.model_rebuild()
