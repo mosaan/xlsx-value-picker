@@ -37,23 +37,28 @@ class ConfigParser:
         if not os.path.exists(file_path):
             # FileNotFoundError の代わりに ConfigLoadError を送出
             raise ConfigLoadError(f"設定ファイルが見つかりません: {file_path}")
+        yaml_extentions = [".yaml", ".yml"]
+        json_extentions = [".json"]
+        supported_extensions = yaml_extentions + json_extentions
+        if not any(file_path.endswith(ext) for ext in supported_extensions):
+            raise ConfigLoadError(f"サポートされていないファイル形式です: {file_path}")
 
         try:
             with open(file_path, encoding="utf-8") as f:
-                if file_path.endswith(".yaml") or file_path.endswith(".yml"):
+                ext = os.path.splitext(file_path)[1].lower()
+                if ext in yaml_extentions:
                     # yaml.safe_load は Any を返すため、cast と ignore を使用
                     return cast(dict[str, Any], yaml.safe_load(f))
-                elif file_path.endswith(".json"):
+                if ext in json_extentions:
                     # json.load は Any を返すため、cast と ignore を使用
                     return cast(dict[str, Any], json.load(f))
-                else:
-                    # ValueError の代わりに ConfigLoadError を送出
-                    raise ConfigLoadError(f"サポートされていないファイル形式です: {file_path}")
+
         except (yaml.YAMLError, json.JSONDecodeError) as e:  # yaml.parser.ParserError は yaml.YAMLError に含まれる
-            print(f"DEBUG: Caught exception type: {type(e)}") # デバッグ出力追加
-            print(f"DEBUG: Exception message: {e}")          # デバッグ出力追加
+            print(f"DEBUG: Caught exception type: {type(e)}")  # デバッグ出力追加
+            print(f"DEBUG: Exception message: {e}")  # デバッグ出力追加
             raise ConfigLoadError(f"設定ファイルのパースに失敗しました: {file_path}") from e
         except Exception as e:  # その他の予期せぬ読み込みエラー
+            print(e)
             raise ConfigLoadError(f"設定ファイルの読み込み中に予期せぬエラーが発生しました: {file_path}") from e
 
 
@@ -201,7 +206,6 @@ class ConfigLoader:
         except Exception as e:
             # その他の予期せぬエラー
             raise ConfigValidationError(e)
-
 
     def load_mcp_config(self, config_path: str) -> "MCPConfig":
         """

@@ -3,25 +3,21 @@
 """
 
 import json
-import sys
-from pathlib import Path
 
 import pytest
 import yaml
-from pydantic import ValidationError as PydanticValidationError  # PydanticValidationError をインポート
+from pydantic import ValidationError as PydanticValidationError
 
-from src.xlsx_value_picker.config_loader import ConfigLoader, ConfigLoadError, ConfigValidationError, MCPConfig
-
-# テスト対象モジュールへのパスを追加
-# sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 from xlsx_value_picker.config_loader import (
     ConfigLoader,
+    ConfigLoadError,
     ConfigModel,
     ConfigParser,
+    ConfigValidationError,
+    MCPConfig,
     OutputFormat,
     Rule,
 )
-from xlsx_value_picker.exceptions import ConfigError, ConfigLoadError, ConfigValidationError, XlsxValuePickerError
 from xlsx_value_picker.validator.validation_expressions import RequiredExpression
 
 
@@ -271,7 +267,6 @@ class TestConfigLoader:
             loader.load_config(str(config_path))
         assert "設定ファイルのモデル検証に失敗しました" in str(excinfo.value)
         assert "Value error, 少なくとも1つのフィールド定義が必要です" in str(excinfo.value)
-
 
 
 def test_load_mcp_config_valid():
