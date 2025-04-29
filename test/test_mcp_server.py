@@ -15,5 +15,15 @@ async def test_server_initialization():
     server = mcp_config.configure()
     print("DEBUG: Server initialized successfully")
     async with Client(server) as client:
-        print(await client.list_tools())
+        list_tools_result = await client.list_tools()
+
+        # Check if the server has tools and specific tools are available
+        assert len(list_tools_result) > 0
+        tool_names = [tool.name for tool in list_tools_result]
+        assert "listModels" in tool_names
+        # assert "getModelInfo" in tool_names
+        # assert "getDiagnostics" in tool_names
+        # assert "getFileContent" in tool_names
+
+        # try to call a tool and check the result
         print(await client.call_tool("listModels"))
