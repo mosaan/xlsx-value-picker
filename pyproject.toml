@@ -24,7 +24,7 @@ classifiers = [
 ]
 
 [project.scripts]
-xlsx-value-picker = "xlsx_value_picker.cli:main"
+xlsx-value-picker = "xlsx_value_picker.cli:cli"
 
 [tool.ruff]
 # 1行の最大文字数

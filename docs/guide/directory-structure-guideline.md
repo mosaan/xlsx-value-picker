@@ -39,35 +39,48 @@ xlsx-value-picker/
 │       ├── __main__.py
 │       ├── cli.py
 │       ├── config_loader.py
-│       ├── config.py
 │       ├── excel_processor.py
+│       ├── exceptions.py
 │       ├── output_formatter.py
-│       ├── template.py
-│       ├── validator/           # 例: バリデーション機能追加時
+│       ├── validation.py
+│       ├── validator/           # バリデーション機能
 │       │   ├── __init__.py
-│       │   ├── engine.py        # バリデーションエンジン
-│       │   └── rules.py         # ルール定義・実装
-│       └── plugins/             # 例: プラグイン機能追加時
+│       │   ├── validation_common.py   # 共通クラス・関数
+│       │   └── validation_expressions.py # 各種バリデーション式
+│       ├── mcp_server/          # MCPサーバー機能
+│       │   ├── __init__.py
+│       │   ├── server.py        # サーバー起動・設定
+│       │   ├── handlers.py      # リクエストハンドラー
+│       │   └── protocol.py      # プロトコル定義
+│       └── plugins/             # 例: プラグイン機能追加時（未実装）
 │           └── __init__.py
 ├── test/
 │   ├── __init__.py
 │   ├── create_test_file.py
 │   ├── generate_sample.py
+│   ├── helper_exceptions.py
 │   ├── sample_template.j2
+│   ├── test_cli_basic.py
+│   ├── test_cli_errors.py
 │   ├── test_cli_integration.py
+│   ├── test_cli_options.py
+│   ├── test_cli_validation.py
 │   ├── test_config_loader.py
 │   ├── test_excel_processor.py
-│   ├── test_main.py
+│   ├── test_mcp_server.py      # MCPサーバーのテスト
 │   ├── test_output_formatter.py
-│   ├── test_template.py
+│   ├── test_pathlib.py
+│   ├── test_pytest.py
 │   └── data/
 │       ├── config.yaml
+│       ├── sample_mcp_config.yaml  # MCPサーバーのテスト用設定
 │       └── test.xlsx
-├── examples/                    # 例: 使用例追加時
+├── examples/                    # 例: 使用例追加時（未実装）
 │   ├── simple.yaml              # 基本的な使用例
 │   ├── advanced.yaml            # 高度な設定例
+│   ├── mcp.yaml                 # MCPサーバー設定例
 │   └── template_examples/       # テンプレート例
-├── scripts/                     # 例: 開発用スクリプト追加時
+├── scripts/                     # 例: 開発用スクリプト追加時（未実装）
 │   ├── release.py               # リリース準備スクリプト
 │   └── generate_docs.py         # ドキュメント生成
 ├── LICENSE
@@ -77,10 +90,44 @@ xlsx-value-picker/
 └── .python-version
 ```
 
+## モジュールの役割
+
+### コアモジュール
+
+- **`__main__.py`**: エントリーポイント。`cli` 関数を呼び出します。
+- **`cli.py`**: CLIコマンドの定義と実行。`run`と`server`サブコマンドを提供します。
+- **`config_loader.py`**: 設定ファイル読み込み機能を提供します。
+- **`excel_processor.py`**: Excelファイルからの値取得機能を提供します。
+- **`output_formatter.py`**: 抽出したデータの出力機能を提供します。
+- **`validation.py`**: バリデーションエンジンを提供します。
+- **`exceptions.py`**: アプリケーション全体で使用する例外クラスを定義します。
+
+### バリデーションモジュール (`validator/`)
+
+- **`validation_common.py`**: バリデーションの共通クラスや関数を定義します。
+- **`validation_expressions.py`**: 各種バリデーション式（compare, required, any_of, all_of, notなど）を定義します。
+
+### MCPサーバーモジュール (`mcp_server/`)
+
+- **`server.py`**: MCPサーバーの初期化、設定読み込み、サーバー起動処理を実装します。
+- **`handlers.py`**: MCPプロトコルのリクエストに対するハンドラー関数を定義します。
+- **`protocol.py`**: MCPプロトコルで使用するデータ構造（リクエスト・レスポンス）をPydanticモデルで定義します。
+
 ## ファイル命名規則
 
-- Python モジュール名: スネークケース（例: `cli.py`, `config.py`）
-- クラス名: パスカルケース（例: `ValueSpec`, `Config`）
-- 関数・メソッド名: スネークケース（例: `get_excel_values`, `render_template`）
+- Python モジュール名: スネークケース（例: `cli.py`, `server.py`）
+- クラス名: パスカルケース（例: `ValueSpec`, `MCPConfig`）
+- 関数・メソッド名: スネークケース（例: `get_excel_values`, `handle_list_models`）
 - 定数: 大文字のスネークケース（例: `DEFAULT_FORMAT`, `MAX_ROWS`）
-- テストファイル: `test_` プレフィックス + テスト対象のモジュール名（例: `test_main.py`, `test_template.py`）
+- テストファイル: `test_` プレフィックス + テスト対象のモジュール名（例: `test_mcp_server.py`, `test_cli_basic.py`）
+
+## 設定ファイルの配置
+
+- プロジェクトの標準設定ファイル（`config.yaml`）: プロジェクトルートに配置
+- MCPサーバー設定ファイル（`mcp.yaml`）: プロジェクトルートに配置
+- テスト用設定ファイル: `test/data/` ディレクトリに配置
+- 設定ファイルの例: `examples/` ディレクトリに配置（予定）
+
+---
+
+最終更新日: 2025年4月30日

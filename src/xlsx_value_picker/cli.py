@@ -1,4 +1,5 @@
 import json
+import logging
 import sys
 from typing import Any
 
@@ -57,28 +58,36 @@ def _write_validation_log(log_path: str, validation_results: list[ValidationResu
         click.echo(f"ログ出力に失敗しました: {e}", err=True)
 
 
-@click.command()
+# CLIのエントリーポイントをmain関数からグループコマンドに変更
+@click.group()
+@click.version_option(version="0.3.0")
+def cli() -> None:
+    """
+    xlsx-value-picker: Excelファイルから値を取得し、バリデーションと出力を行うツール
+    """
+    pass
+
+
+# 既存のmain関数をrunサブコマンドとして登録
+@cli.command(name="run")
 @click.argument("excel_file", type=click.Path(exists=True, file_okay=True, dir_okay=False))
 @click.option("-c", "--config", default="config.yaml", help="検証ルールや設定を記述した設定ファイル")
 @click.option("--ignore-errors", is_flag=True, help="検証エラーが発生しても処理を継続します")
 @click.option("-o", "--output", help="出力先ファイルを指定します（未指定の場合は標準出力）")
 @click.option("--log", help="検証エラーを記録するログファイルを指定します")
-# --schema オプションは削除 (スキーマ検証は Pydantic に一本化)
 @click.option("--include-empty-cells", is_flag=True, help="空セルも出力に含めます")
 @click.option("--validate-only", is_flag=True, help="バリデーションのみを実行します")
-@click.version_option(version="0.3.0")
-def main(  # 戻り値型を追加
+def run(
     excel_file: str,
     config: str,
     ignore_errors: bool,
     output: str | None,
     log: str | None,
-    # schema 引数は削除
     include_empty_cells: bool,
     validate_only: bool,
 ) -> None:
     """
-    Excelファイルから値を取得し、バリデーションと出力を行うツール
+    Excelファイルから値を取得し、バリデーションと出力を行います
 
     EXCEL_FILE: 処理対象のExcelファイルパス
     """
@@ -224,6 +233,51 @@ def main(  # 戻り値型を追加
         sys.exit(1)
 
 
+# MCPサーバーサブコマンドを追加
+@cli.command(name="server")
+@click.option(
+    "-c",
+    "--config",
+    default="mcp.yaml",
+    help="MCPサーバー設定ファイルのパス (デフォルト: mcp.yaml)"
+)
+@click.option(
+    "--log-level",
+    type=click.Choice(["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"], case_sensitive=False),
+    default="INFO",
+    help="ログレベルを設定します (デフォルト: INFO)"
+)
+def server(config: str, log_level: str) -> None:
+    """
+    MCPサーバー機能を起動します
+
+    標準入出力を介してModel Context Protocol (MCP) サーバーとして動作し、
+    Excelファイル処理機能を外部のMCPクライアント（VS Code拡張機能など）に提供します。
+    """
+    # ログレベルの変換
+    log_levels = {
+        "DEBUG": logging.DEBUG,
+        "INFO": logging.INFO,
+        "WARNING": logging.WARNING,
+        "ERROR": logging.ERROR,
+        "CRITICAL": logging.CRITICAL,
+    }
+    numeric_log_level = log_levels[log_level.upper()]
+
+    # MCP serverモジュールの読み込み
+    try:
+        from .mcp_server.server import main as server_main
+        server_main(config_path=config, log_level=numeric_log_level)
+    except ImportError as e:
+        click.echo(f"MCPサーバーモジュールの読み込みに失敗しました: {e}", err=True)
+        click.echo("必要な依存関係がインストールされていない可能性があります。", err=True)
+        click.echo("'uv add mcp' を実行してください。", err=True)
+        sys.exit(1)
+    except Exception as e:
+        click.echo(f"MCPサーバーの起動中にエラーが発生しました: {e}", err=True)
+        sys.exit(1)
+
+
 def load_config(config_path: str) -> dict[str, Any]:
     """
     設定ファイルを読み込む (テストとの互換性のために追加)
@@ -245,5 +299,6 @@ def load_config(config_path: str) -> dict[str, Any]:
         raise RuntimeError(f"テスト用の設定読み込みに失敗: {e}") from e
 
 
+# メインエントリポイントの変更
 if __name__ == "__main__":
-    main()
+    cli()  # mainからcliに変更
