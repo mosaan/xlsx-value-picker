@@ -15,3 +15,4 @@ tmp
 *.xlsx
 *.yaml
 .env
+**/.claude/settings.local.json
