@@ -56,9 +56,14 @@ def handle_get_model_info(models: list[MCPAvailableConfigModel], request: GetMod
     if model is None:
         raise ValueError(f"指定されたモデルID '{request.model_id}' が見つかりません")
 
+    if model.model_name is None:
+        model_id = request.model_id  # モデル名が設定されていない場合はリクエストIDを使用
+    else:
+        model_id = model.model_name
+
     # モデル情報を構築して返す
     return ModelInfo(
-        model_id=model.model_name,
+        model_id=model_id,
         description=model.model_description,
         fields=model.fields,
         excel_path=None,  # 現在の実装ではExcelパスを保持していない
