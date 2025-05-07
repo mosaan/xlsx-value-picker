@@ -55,6 +55,9 @@ class ConfigParser:
                     # json.load は Any を返すため、cast と ignore を使用
                     return cast(dict[str, Any], json.load(f))
 
+                # サポートされている拡張子のいずれかであるべきだが、念のため
+                raise ConfigLoadError(f"サポートされていないファイル形式です: {file_path}")
+
         except (yaml.YAMLError, json.JSONDecodeError) as e:  # yaml.parser.ParserError は yaml.YAMLError に含まれる
             print(f"DEBUG: Caught exception type: {type(e)}")  # デバッグ出力追加
             print(f"DEBUG: Exception message: {e}")  # デバッグ出力追加
@@ -269,7 +272,7 @@ class MCPConfig(BaseModel):
     # 以降内部用フィールド
     loaded_models: list[MCPAvailableConfigModel] = Field(default=[], exclude=True)
 
-    def cache_models(self):
+    def cache_models(self) -> None:
         """モデル一覧をパースしてモデル設定をキャッシュする"""
         # モデル設定をロード
         self.loaded_models: list[MCPAvailableConfigModel] = [
@@ -284,12 +287,12 @@ class MCPConfig(BaseModel):
         ]
         return "\n".join(simplified_models)
 
-    def configure(self) -> FastMCP:
+    def configure(self) -> FastMCP[Any]:
         """設定内容に基づいてFastMCPサーバのインスタンスを構築して返す"""
         self.cache_models()
 
         # FastMCP サーバーを構築
-        server = FastMCP()
+        server: FastMCP[Any] = FastMCP()
 
         # ハンドラーを登録
         server.add_tool(
@@ -329,7 +332,7 @@ class ModelConfigReference(BaseModel, IModelReferences):
         """モデル設定を取得する"""
         path = Path(self.config_path)
         # パス表記が絶対パスでない場合はMCP設定ファイルの親フォルダからの相対パスとして解釈する
-        if not path.is_absolute():
+        if not path.is_absolute() and context.origin is not None:
             path = context.origin.parent / path
         # 設定ファイルを読み込む
         config = ConfigParser.parse_file(str(path))
