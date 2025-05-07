@@ -214,9 +214,9 @@ def run(
         # 4. 出力処理
         try:
             formatter = OutputFormatter(config_model)
-            result = formatter.write_output(data, output)
+            formatted_result = formatter.write_output(data, output)
             if not output:
-                click.echo(result)
+                click.echo(formatted_result)
             click.echo("処理が完了しました。", err=True)
         except OutputError as e:
             _handle_error(e, ignore_errors, "出力処理に失敗しました")
