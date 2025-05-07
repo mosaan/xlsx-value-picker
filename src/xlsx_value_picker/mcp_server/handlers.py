@@ -65,7 +65,9 @@ def handle_get_model_info(models: list[MCPAvailableConfigModel], request: GetMod
     )
 
 
-def handle_get_diagnostics(models: list[MCPAvailableConfigModel], request: GetDiagnosticsRequest) -> GetDiagnosticsResponse:
+def handle_get_diagnostics(
+    models: list[MCPAvailableConfigModel], request: GetDiagnosticsRequest
+) -> GetDiagnosticsResponse:
     """
     getDiagnosticsリクエストを処理し、バリデーション結果を返す
 
@@ -112,7 +114,9 @@ def handle_get_diagnostics(models: list[MCPAvailableConfigModel], request: GetDi
     return GetDiagnosticsResponse(is_valid=is_valid, errors=validation_errors)
 
 
-def handle_get_file_content(models: list[MCPAvailableConfigModel], request: GetFileContentRequest) -> GetFileContentResponse:
+def handle_get_file_content(
+    models: list[MCPAvailableConfigModel], request: GetFileContentRequest
+) -> GetFileContentResponse:
     """
     getFileContentリクエストを処理し、構造化テキストを返す
 
@@ -143,7 +147,7 @@ def handle_get_file_content(models: list[MCPAvailableConfigModel], request: GetF
         # excel_path = "path/to/excel/file.xlsx"  # 将来的には設定から取得する
         # processor = ExcelProcessor(excel_path, model)
         # content = processor.process()
-        content = f"{{\"message\": \"Excel content for model {request.model_id} would be here\"}}"
+        content = f'{{"message": "Excel content for model {request.model_id} would be here"}}'
 
         return GetFileContentResponse(content=content, format=output_format)
     except ExcelProcessingError as e:

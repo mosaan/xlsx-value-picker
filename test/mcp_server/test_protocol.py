@@ -1,6 +1,7 @@
 """
 Tests for MCP Server protocol data structures.
 """
+
 from unittest.mock import patch
 
 import pytest
@@ -20,6 +21,7 @@ class TestListModelsProtocol:
 
             class ListModelsResponse(BaseModel):
                 """Response for $/listModels method."""
+
                 models: list[str]
 
             # Use our test implementation
@@ -49,6 +51,7 @@ class TestGetModelInfoProtocol:
 
             class GetModelInfoRequest(BaseModel):
                 """Request for $/getModelInfo method."""
+
                 model_id: str
 
             # Use our test implementation
@@ -75,6 +78,7 @@ class TestGetModelInfoProtocol:
 
             class GetModelInfoResponse(BaseModel):
                 """Response for $/getModelInfo method."""
+
                 model_id: str
                 excel_file_path: str
                 sheet_name: str
@@ -93,7 +97,7 @@ class TestGetModelInfoProtocol:
                 excel_file_path="test.xlsx",
                 sheet_name="Sheet1",
                 fields={"A1": "header1"},
-                rules_count=2
+                rules_count=2,
             )
             assert valid_response.model_id == "test_model"
             assert valid_response.excel_file_path == "test.xlsx"
@@ -119,6 +123,7 @@ class TestGetDiagnosticsProtocol:
 
             class ValidationDiagnostic(BaseModel):
                 """Diagnostic information for validation issues."""
+
                 message: str
                 fields: list[str]
                 locations: list[str]
@@ -133,10 +138,7 @@ class TestGetDiagnosticsProtocol:
 
             # Valid diagnostic
             valid_diagnostic = ValidationDiagnostic(
-                message="Test error",
-                fields=["field1"],
-                locations=["A1"],
-                rule="test_rule"
+                message="Test error", fields=["field1"], locations=["A1"], rule="test_rule"
             )
             assert valid_diagnostic.message == "Test error"
             assert valid_diagnostic.fields == ["field1"]
@@ -146,11 +148,7 @@ class TestGetDiagnosticsProtocol:
 
             # With custom severity
             custom_severity = ValidationDiagnostic(
-                message="Test warning",
-                fields=["field2"],
-                locations=["B2"],
-                rule="test_rule",
-                severity="warning"
+                message="Test warning", fields=["field2"], locations=["B2"], rule="test_rule", severity="warning"
             )
             assert custom_severity.severity == "warning"
 
@@ -167,6 +165,7 @@ class TestGetDiagnosticsProtocol:
 
             class GetDiagnosticsRequest(BaseModel):
                 """Request for $/getDiagnostics method."""
+
                 model_id: str
 
             # Use our test implementation
@@ -194,6 +193,7 @@ class TestGetDiagnosticsProtocol:
 
                 class ValidationDiagnostic(BaseModel):
                     """Diagnostic information for validation issues."""
+
                     message: str
                     fields: list[str]
                     locations: list[str]
@@ -202,6 +202,7 @@ class TestGetDiagnosticsProtocol:
 
                 class GetDiagnosticsResponse(BaseModel):
                     """Response for $/getDiagnostics method."""
+
                     diagnostics: list[ValidationDiagnostic]
                     is_valid: bool
 
@@ -214,25 +215,16 @@ class TestGetDiagnosticsProtocol:
 
                 # Create test diagnostics
                 test_diagnostic = ValidationDiagnostic(
-                    message="Test error",
-                    fields=["field1"],
-                    locations=["A1"],
-                    rule="test_rule"
+                    message="Test error", fields=["field1"], locations=["A1"], rule="test_rule"
                 )
 
                 # Valid response with diagnostics
-                valid_response_with_diagnostics = GetDiagnosticsResponse(
-                    diagnostics=[test_diagnostic],
-                    is_valid=False
-                )
+                valid_response_with_diagnostics = GetDiagnosticsResponse(diagnostics=[test_diagnostic], is_valid=False)
                 assert valid_response_with_diagnostics.diagnostics[0].message == "Test error"
                 assert valid_response_with_diagnostics.is_valid is False
 
                 # Valid response without diagnostics
-                valid_response_without_diagnostics = GetDiagnosticsResponse(
-                    diagnostics=[],
-                    is_valid=True
-                )
+                valid_response_without_diagnostics = GetDiagnosticsResponse(diagnostics=[], is_valid=True)
                 assert len(valid_response_without_diagnostics.diagnostics) == 0
                 assert valid_response_without_diagnostics.is_valid is True
 
@@ -254,6 +246,7 @@ class TestGetFileContentProtocol:
 
             class GetFileContentRequest(BaseModel):
                 """Request for $/getFileContent method."""
+
                 model_id: str
                 skip_validation: bool | None = False
                 ignore_validation: bool | None = False
@@ -272,9 +265,7 @@ class TestGetFileContentProtocol:
 
             # Valid request with all fields
             valid_request_full = GetFileContentRequest(
-                model_id="test_model",
-                skip_validation=True,
-                ignore_validation=True
+                model_id="test_model", skip_validation=True, ignore_validation=True
             )
             assert valid_request_full.skip_validation is True
             assert valid_request_full.ignore_validation is True
@@ -294,6 +285,7 @@ class TestGetFileContentProtocol:
 
                 class ValidationError(BaseModel):
                     """Validation error information."""
+
                     message: str
                     fields: list[str]
                     locations: list[str]
@@ -301,6 +293,7 @@ class TestGetFileContentProtocol:
 
                 class GetFileContentResponse(BaseModel):
                     """Response for $/getFileContent method."""
+
                     content: str | None = None
                     format: str
                     metadata: dict[str, str]
@@ -315,21 +308,14 @@ class TestGetFileContentProtocol:
 
                 # Create test validation error
                 test_validation_error = ValidationError(
-                    message="Test error",
-                    fields=["field1"],
-                    locations=["A1"],
-                    rule="test_rule"
+                    message="Test error", fields=["field1"], locations=["A1"], rule="test_rule"
                 )
 
                 # Valid response with content
                 valid_response_with_content = GetFileContentResponse(
                     content="formatted_output",
                     format="json",
-                    metadata={
-                        "source": "test.xlsx",
-                        "model_id": "test_model",
-                        "validation_status": "valid"
-                    }
+                    metadata={"source": "test.xlsx", "model_id": "test_model", "validation_status": "valid"},
                 )
                 assert valid_response_with_content.content == "formatted_output"
                 assert valid_response_with_content.format == "json"
@@ -340,12 +326,8 @@ class TestGetFileContentProtocol:
                 valid_response_with_errors = GetFileContentResponse(
                     content=None,
                     format="json",
-                    metadata={
-                        "source": "test.xlsx",
-                        "model_id": "test_model",
-                        "validation_status": "invalid"
-                    },
-                    validation_errors=[test_validation_error]
+                    metadata={"source": "test.xlsx", "model_id": "test_model", "validation_status": "invalid"},
+                    validation_errors=[test_validation_error],
                 )
                 assert valid_response_with_errors.content is None
                 assert valid_response_with_errors.validation_errors[0].message == "Test error"

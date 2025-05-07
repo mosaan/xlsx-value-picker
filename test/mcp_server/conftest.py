@@ -1,6 +1,7 @@
 """
 Test fixtures and utilities for MCP Server tests.
 """
+
 import os
 import tempfile
 from pathlib import Path
@@ -29,11 +30,7 @@ def mock_model_config():
 
     # Create a mock ModelConfig
     model_config = ModelConfig(
-        excel_file_path="test.xlsx",
-        sheet_name="Sheet1",
-        fields={"A1": "header1"},
-        rules=[],
-        output=output_format
+        excel_file_path="test.xlsx", sheet_name="Sheet1", fields={"A1": "header1"}, rules=[], output=output_format
     )
 
     return model_config
@@ -44,11 +41,7 @@ def mock_app_config(mock_model_config):
     """Create a mock AppConfig instance with test models."""
     from xlsx_value_picker.config_loader import AppConfig
 
-    app_config = AppConfig(
-        models={
-            "test_model": mock_model_config
-        }
-    )
+    app_config = AppConfig(models={"test_model": mock_model_config})
 
     return app_config
 
@@ -73,7 +66,7 @@ def test_config_data():
                 "sheet_name": "Sheet1",
                 "fields": {"A1": "header1"},
                 "rules": [],
-                "output": {"format": "json"}
+                "output": {"format": "json"},
             }
         }
     }
@@ -82,7 +75,7 @@ def test_config_data():
 @pytest.fixture
 def test_config_file(test_config_data):
     """Create a temporary config file for testing."""
-    with tempfile.NamedTemporaryFile(suffix='.yaml', delete=False) as temp:
+    with tempfile.NamedTemporaryFile(suffix=".yaml", delete=False) as temp:
         yaml.dump(test_config_data, temp)
         temp_path = Path(temp.name)
 
@@ -105,7 +98,7 @@ def mock_validation_results():
             error_fields=["field1"],
             error_locations=["A1"],
             rule_name="test_rule",
-            severity="error"
+            severity="error",
         )
     ]
 
@@ -154,6 +147,7 @@ def mock_output_formatter():
 
 class MockMCPClient:
     """Mock MCP client for testing server-client interactions."""
+
     def __init__(self, server_process):
         self.server_process = server_process
         self.stdin = server_process.stdin
@@ -165,12 +159,7 @@ class MockMCPClient:
         import json
 
         self.request_id += 1
-        request = {
-            "jsonrpc": "2.0",
-            "id": self.request_id,
-            "method": method,
-            "params": params or {}
-        }
+        request = {"jsonrpc": "2.0", "id": self.request_id, "method": method, "params": params or {}}
 
         # Send request
         self.stdin.write(json.dumps(request).encode() + b"\n")

@@ -1,6 +1,7 @@
 """
 Tests for MCP Server core functionality.
 """
+
 from unittest.mock import MagicMock, patch
 
 
@@ -9,14 +10,17 @@ def test_create_server():
     with patch("xlsx_value_picker.mcp_server.server.FastMCP") as mock_fastmcp:
         # Mock implementation for testing
         with patch("xlsx_value_picker.mcp_server.server.create_server") as mock_create_server:
+
             def fake_create_server():
                 from mcp.server.fastmcp import FastMCP
+
                 return FastMCP("xlsx-value-picker")
 
             mock_create_server.side_effect = fake_create_server
 
             # Import the function and execute it
             from xlsx_value_picker.mcp_server.server import create_server
+
             server = create_server()
 
             # Verify FastMCP was called correctly
@@ -36,27 +40,33 @@ def test_main_initializes_state():
 
                     # Mock implementation for testing
                     with patch("xlsx_value_picker.mcp_server.server.main") as mock_main:
+
                         def fake_main(config_path="config.yaml"):
                             # Initialize state
                             from xlsx_value_picker.mcp_server.state import MCPServerState
+
                             state = MCPServerState(config_path)
 
                             # Create server
                             from xlsx_value_picker.mcp_server.server import create_server
+
                             server = create_server()
 
                             # Register handlers
                             from xlsx_value_picker.mcp_server.handlers import register_handlers
+
                             register_handlers(server, state)
 
                             # Start server with stdio transport
                             from mcp.transports.stdio import StdioTransport
+
                             server.serve(StdioTransport())
 
                         mock_main.side_effect = fake_main
 
                         # Import the function and execute it
                         from xlsx_value_picker.mcp_server.server import main
+
                         main("test_config.yaml")
 
                         # Verify state was initialized with correct path
@@ -82,27 +92,33 @@ def test_main_uses_default_config_path():
 
                     # Mock implementation for testing
                     with patch("xlsx_value_picker.mcp_server.server.main") as mock_main:
+
                         def fake_main(config_path="config.yaml"):
                             # Initialize state
                             from xlsx_value_picker.mcp_server.state import MCPServerState
+
                             state = MCPServerState(config_path)
 
                             # Create server
                             from xlsx_value_picker.mcp_server.server import create_server
+
                             server = create_server()
 
                             # Register handlers
                             from xlsx_value_picker.mcp_server.handlers import register_handlers
+
                             register_handlers(server, state)
 
                             # Start server with stdio transport
                             from mcp.transports.stdio import StdioTransport
+
                             server.serve(StdioTransport())
 
                         mock_main.side_effect = fake_main
 
                         # Import the function and execute it with default config path
                         from xlsx_value_picker.mcp_server.server import main
+
                         main()
 
                         # Verify state was initialized with default path
@@ -114,6 +130,7 @@ def test_server_setup_logging():
     with patch("xlsx_value_picker.mcp_server.server.logging") as mock_logging:
         # Mock implementation for testing
         with patch("xlsx_value_picker.mcp_server.server.create_server") as mock_create_server:
+
             def fake_create_server():
                 import logging
 
@@ -121,17 +138,19 @@ def test_server_setup_logging():
                 logging.basicConfig(
                     level=logging.INFO,
                     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-                    handlers=[logging.StreamHandler()]
+                    handlers=[logging.StreamHandler()],
                 )
 
                 # Create and return server
                 from mcp.server.fastmcp import FastMCP
+
                 return FastMCP("xlsx-value-picker")
 
             mock_create_server.side_effect = fake_create_server
 
             # Import the function and execute it
             from xlsx_value_picker.mcp_server.server import create_server
+
             _ = create_server()
 
             # Verify logging was set up

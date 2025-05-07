@@ -1,6 +1,7 @@
 """
 Integration tests for MCP Server functionality.
 """
+
 import json
 from unittest.mock import MagicMock, patch
 
@@ -20,11 +21,7 @@ class TestServerIntegration:
         # Configure stdout to return a JSON-RPC response
         def mock_readline():
             # Simulates the server processing a request and writing a response
-            return json.dumps({
-                "jsonrpc": "2.0",
-                "id": 1,
-                "result": {"models": ["test_model"]}
-            }).encode() + b"\n"
+            return json.dumps({"jsonrpc": "2.0", "id": 1, "result": {"models": ["test_model"]}}).encode() + b"\n"
 
         mock_process.stdout.readline.side_effect = mock_readline
 
@@ -34,23 +31,17 @@ class TestServerIntegration:
         """Test interaction between MCP client and server using the mock process."""
         # Create a mock MCP client
         from test.mcp_server.conftest import MockMCPClient
+
         client = MockMCPClient(mock_server_process)
 
         # Send a request and get response
         response = client.send_request("$/listModels")
 
         # Verify request was sent correctly
-        expected_request = {
-            "jsonrpc": "2.0",
-            "id": 1,
-            "method": "$/listModels",
-            "params": {}
-        }
+        expected_request = {"jsonrpc": "2.0", "id": 1, "method": "$/listModels", "params": {}}
 
         # Check that the request was written to stdin
-        mock_server_process.stdin.write.assert_called_once_with(
-            json.dumps(expected_request).encode() + b"\n"
-        )
+        mock_server_process.stdin.write.assert_called_once_with(json.dumps(expected_request).encode() + b"\n")
 
         # Verify response was processed correctly
         assert "result" in response
@@ -82,6 +73,7 @@ class TestServerIntegration:
 
                     # Create mocked implementation for register_handlers
                     with patch("xlsx_value_picker.mcp_server.handlers.register_handlers") as mock_register:
+
                         def fake_register(server, state):
                             @server.method("$/listModels")
                             def handle_list_models(params):
@@ -106,8 +98,9 @@ class TestServerIntegration:
                         assert "models" in result
                         assert set(result["models"]) == {"test_model"}
 
-    def test_get_diagnostics_integration(self, test_config_file, mock_app_config,
-                                       mock_model_config, mock_validation_results):
+    def test_get_diagnostics_integration(
+        self, test_config_file, mock_app_config, mock_model_config, mock_validation_results
+    ):
         """Test integration of get_diagnostics handler with validation engine."""
         # Mock implementations
         with patch("xlsx_value_picker.mcp_server.state.MCPServerState") as mock_state_class:
@@ -134,6 +127,7 @@ class TestServerIntegration:
 
                     # Create mocked implementation for register_handlers
                     with patch("xlsx_value_picker.mcp_server.handlers.register_handlers") as mock_register:
+
                         def fake_register(server, state):
                             @server.method("$/getDiagnostics")
                             def handle_get_diagnostics(params):
@@ -146,10 +140,10 @@ class TestServerIntegration:
                                     raise ValueError(f"モデルが見つかりません: {model_id}")
 
                                 from xlsx_value_picker.validation import ValidationEngine
+
                                 validation_engine = ValidationEngine(model_config.rules)
                                 validation_results = validation_engine.validate(
-                                    model_config.excel_file_path,
-                                    model_config.fields
+                                    model_config.excel_file_path, model_config.fields
                                 )
 
                                 return {
@@ -159,11 +153,11 @@ class TestServerIntegration:
                                             "fields": result.error_fields,
                                             "locations": result.error_locations,
                                             "rule": result.rule_name,
-                                            "severity": result.severity
+                                            "severity": result.severity,
                                         }
                                         for result in validation_results
                                     ],
-                                    "is_valid": len(validation_results) == 0
+                                    "is_valid": len(validation_results) == 0,
                                 }
 
                         mock_register.side_effect = fake_register
@@ -187,8 +181,7 @@ class TestServerIntegration:
                         # Verify validation engine was used correctly
                         mock_validation_engine.assert_called_once_with(mock_model_config.rules)
                         mock_validation_instance.validate.assert_called_once_with(
-                            mock_model_config.excel_file_path,
-                            mock_model_config.fields
+                            mock_model_config.excel_file_path, mock_model_config.fields
                         )
 
                         # Verify the result
@@ -197,9 +190,15 @@ class TestServerIntegration:
                         assert result["diagnostics"][0]["message"] == "Test validation error"
                         assert result["is_valid"] is False
 
-    def test_get_file_content_integration(self, test_config_file, mock_app_config,
-                                        mock_model_config, mock_validation_results,
-                                        mock_excel_extractor, mock_output_formatter):
+    def test_get_file_content_integration(
+        self,
+        test_config_file,
+        mock_app_config,
+        mock_model_config,
+        mock_validation_results,
+        mock_excel_extractor,
+        mock_output_formatter,
+    ):
         """Test integration of get_file_content handler with extraction and formatting."""
         # Mock implementations
         with patch("xlsx_value_picker.mcp_server.state.MCPServerState") as mock_state_class:
@@ -240,6 +239,7 @@ class TestServerIntegration:
 
                             # Create mocked implementation for register_handlers
                             with patch("xlsx_value_picker.mcp_server.handlers.register_handlers") as mock_register:
+
                                 def fake_register(server, state):
                                     @server.method("$/getFileContent")
                                     def handle_get_file_content(params):
@@ -255,10 +255,10 @@ class TestServerIntegration:
                                         validation_results = []
                                         if model_config.rules and not params.get("skip_validation", False):
                                             from xlsx_value_picker.validation import ValidationEngine
+
                                             validation_engine = ValidationEngine(model_config.rules)
                                             validation_results = validation_engine.validate(
-                                                model_config.excel_file_path,
-                                                model_config.fields
+                                                model_config.excel_file_path, model_config.fields
                                             )
 
                                         # Return validation errors if any and not ignored
@@ -269,21 +269,23 @@ class TestServerIntegration:
                                                         "message": result.error_message,
                                                         "fields": result.error_fields,
                                                         "locations": result.error_locations,
-                                                        "rule": result.rule_name
+                                                        "rule": result.rule_name,
                                                     }
                                                     for result in validation_results
                                                 ],
                                                 "content": None,
-                                                "format": model_config.output.format
+                                                "format": model_config.output.format,
                                             }
 
                                         # Extract data from Excel
                                         from xlsx_value_picker.excel_processor import ExcelValueExtractor
+
                                         with ExcelValueExtractor(model_config.excel_file_path) as extractor:
                                             data = extractor.extract_values(model_config)
 
                                         # Format output
                                         from xlsx_value_picker.output_formatter import OutputFormatter
+
                                         formatter = OutputFormatter(model_config)
                                         formatted_output = formatter.format_output(data)
 
@@ -293,8 +295,8 @@ class TestServerIntegration:
                                             "metadata": {
                                                 "source": model_config.excel_file_path,
                                                 "model_id": model_id,
-                                                "validation_status": "valid" if not validation_results else "warning"
-                                            }
+                                                "validation_status": "valid" if not validation_results else "warning",
+                                            },
                                         }
 
                                 mock_register.side_effect = fake_register

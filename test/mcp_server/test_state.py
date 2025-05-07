@@ -1,6 +1,7 @@
 """
 Tests for MCP Server state management.
 """
+
 from unittest.mock import MagicMock, patch
 
 
@@ -27,6 +28,7 @@ def test_state_singleton_pattern():
                 def load_config(self):
                     # Load config from file using ConfigLoader
                     from xlsx_value_picker.config_loader import ConfigLoader
+
                     config_loader = ConfigLoader()
                     self.app_config = config_loader.load_config(self.config_path)
 
@@ -76,6 +78,7 @@ def test_state_loads_config():
                 def load_config(self):
                     # Load config from file using ConfigLoader
                     from xlsx_value_picker.config_loader import ConfigLoader
+
                     config_loader = ConfigLoader()
                     self.app_config = config_loader.load_config(self.config_path)
 
@@ -119,6 +122,7 @@ def test_state_reload_config():
                 def load_config(self):
                     # Load config from file using ConfigLoader
                     from xlsx_value_picker.config_loader import ConfigLoader
+
                     config_loader = ConfigLoader()
                     self.app_config = config_loader.load_config(self.config_path)
 
@@ -154,12 +158,10 @@ def test_state_provides_model_access():
     """Test that state provides methods to access models easily."""
     # Create mock app config with models
     from xlsx_value_picker.config_loader import AppConfig
+
     mock_model1 = MagicMock()
     mock_model2 = MagicMock()
-    mock_app_config = AppConfig(models={
-        "model1": mock_model1,
-        "model2": mock_model2
-    })
+    mock_app_config = AppConfig(models={"model1": mock_model1, "model2": mock_model2})
 
     # Mock implementation for testing
     with patch("xlsx_value_picker.mcp_server.state.MCPServerState") as mock_state_class:
@@ -179,6 +181,7 @@ def test_state_provides_model_access():
                 def load_config(self):
                     # Load config from file using ConfigLoader
                     from xlsx_value_picker.config_loader import ConfigLoader
+
                     config_loader = ConfigLoader()
                     self.app_config = config_loader.load_config(self.config_path)
 

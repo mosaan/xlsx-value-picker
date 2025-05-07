@@ -65,8 +65,7 @@ def main(config_path: str = "mcp.yaml", log_level: int = logging.INFO) -> None:
         server.add_tool(
             name="getModelInfo",
             fn=lambda request_dict: handle_get_model_info(
-                mcp_config.loaded_models,
-                GetModelInfoRequest.model_validate(request_dict)
+                mcp_config.loaded_models, GetModelInfoRequest.model_validate(request_dict)
             ),
             description=mcp_config.config.tool_descriptions.get("getModelInfo", "特定のモデルの詳細情報を取得します"),
         )
@@ -74,19 +73,21 @@ def main(config_path: str = "mcp.yaml", log_level: int = logging.INFO) -> None:
         server.add_tool(
             name="getDiagnostics",
             fn=lambda request_dict: handle_get_diagnostics(
-                mcp_config.loaded_models,
-                GetDiagnosticsRequest.model_validate(request_dict)
+                mcp_config.loaded_models, GetDiagnosticsRequest.model_validate(request_dict)
             ),
-            description=mcp_config.config.tool_descriptions.get("getDiagnostics", "モデルのバリデーション結果を取得します"),
+            description=mcp_config.config.tool_descriptions.get(
+                "getDiagnostics", "モデルのバリデーション結果を取得します"
+            ),
         )
 
         server.add_tool(
             name="getFileContent",
             fn=lambda request_dict: handle_get_file_content(
-                mcp_config.loaded_models,
-                GetFileContentRequest.model_validate(request_dict)
+                mcp_config.loaded_models, GetFileContentRequest.model_validate(request_dict)
             ),
-            description=mcp_config.config.tool_descriptions.get("getFileContent", "Excelファイルの内容を構造化テキストで取得します"),
+            description=mcp_config.config.tool_descriptions.get(
+                "getFileContent", "Excelファイルの内容を構造化テキストで取得します"
+            ),
         )
 
         # サーバー起動
@@ -102,4 +103,3 @@ def main(config_path: str = "mcp.yaml", log_level: int = logging.INFO) -> None:
     except Exception as e:
         logger.exception(f"MCPサーバーの起動に失敗しました: {e}")
         sys.exit(1)
-
