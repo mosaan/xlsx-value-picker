@@ -1,17 +1,12 @@
-#!/usr/bin/env python
 """
 テスト用のExcelファイルを作成するシンプルなスクリプト
 """
 
-import sys
 from pathlib import Path
 
 import openpyxl
 from openpyxl.utils import absolute_coordinate, quote_sheetname
 from openpyxl.workbook.defined_name import DefinedName
-
-# 現在のディレクトリを基準にして、親ディレクトリを参照できるようにする
-sys.path.append(str(Path(__file__).parent.parent))
 
 # 出力先ファイル
 output_file = Path(__file__).parent / "data" / "test.xlsx"

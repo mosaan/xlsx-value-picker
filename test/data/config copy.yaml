@@ -1,0 +1,36 @@
+fields:
+  value1: Sheet1!B2
+  value2: Sheet1!B3
+  value3: Sheet1!B4
+
+rules:
+  - name: sample
+    expression:
+      field: value1
+      required: true
+    error_message: "Value1 is required"
+  - name: fofo
+    expression:
+      compare:
+        left: "value2"
+        operator: ">"
+        right: 0
+    error_message: "{field}は0より大きい値を入力してください"
+  - name: fofo2
+    expression:
+      any_of:
+        - compare:
+            left: "value1"
+            operator: "<"
+            right: 100
+        - compare:
+            left: "value2"
+            operator: ">="
+            right: 200
+    error_message: "{field}は100未満または{field}は300以上の値を入力してください"
+output:
+  format: jinja2
+  template: |
+    - value1の値: {{ value1 }}
+    * value2: {{ value2 }}
+    + value3: {{ value3 }}

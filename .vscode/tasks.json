@@ -1,0 +1,26 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Ruff check all files",
+      "type": "shell",
+      "command": "uv run ruff check",
+      "problemMatcher": {
+        "owner": "pythonruff",
+        "fileLocation": [
+          "relative",
+          "${workspaceFolder}"
+        ],
+        "pattern": {
+          "kind": "location",
+          "regexp": "^([^ ]*):(\\d+):(\\d+): (\\w+) (.+)$",
+          "file": 1,
+          "line": 2,
+          "column": 3,
+          "message": 5,
+          "code": 4
+        }
+      }
+    }
+  ]
+}

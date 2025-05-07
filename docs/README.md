@@ -23,6 +23,7 @@
 
 - [CLIインターフェース仕様](./spec/cli-spec.md): コマンドラインインターフェースの仕様
 - [バリデーションルールスキーマ](./spec/rule-schema.json): バリデーションルールを定義するJSONスキーマ
+- [MCPサーバー仕様](./spec/mcp-server-spec.md): Model Context Protocol サーバーの仕様
 
 #### 設計文書 (`design/`)
 
@@ -30,6 +31,7 @@
 
 - [バリデーション設計ドキュメント](./design/validation-design.md): バリデーション機能の設計
 - [設定ローダー設計](./design/config-loader-design.md): 設定ファイル読み込み機能の設計
+- [MCPサーバー設計](./design/mcp-server-design.md): MCPサーバー機能の設計
 
 #### ガイドライン (`guide/`)
 
@@ -63,4 +65,4 @@
 
 ---
 
-最終更新日: 2025年4月19日
+最終更新日: 2025年4月30日

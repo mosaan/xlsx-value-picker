@@ -34,11 +34,11 @@ class ExcelValueExtractor:
             self.workbook = openpyxl.load_workbook(self.excel_path, data_only=True)
             return self
         except InvalidFileException as e:
-            raise ExcelProcessingError(f"Excelファイル形式が無効です: {self.excel_path} - {e}")
+            raise ExcelProcessingError(f"Excelファイル形式が無効です: {self.excel_path}") from e
         except Exception as e:
             raise ExcelProcessingError(
-                f"Excelファイルの読み込み中に予期せぬエラーが発生しました: {self.excel_path} - {e}"
-            )
+                f"Excelファイルの読み込み中に予期せぬエラーが発生しました: {self.excel_path}"
+            ) from e
 
     def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         """コンテキストマネージャの終了時にワークブックを閉じる"""
@@ -101,14 +101,14 @@ class ExcelValueExtractor:
         # シートの取得
         try:
             sheet = self.workbook[sheet_name]
-        except KeyError:
-            raise ExcelProcessingError(f"シートが見つかりません: {sheet_name}")
+        except KeyError as e:
+            raise ExcelProcessingError(f"シートが見つかりません: {sheet_name}") from e
 
         # セルの値を取得
         try:
             return sheet[cell_addr].value
-        except (ValueError, KeyError):
-            raise ExcelProcessingError(f"無効なセル参照です: {cell_addr}")
+        except (ValueError, KeyError) as e:
+            raise ExcelProcessingError(f"無効なセル参照です: {cell_addr}") from e
 
     def close(self) -> None:
         """ワークブックを閉じる"""

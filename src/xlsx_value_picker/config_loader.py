@@ -4,9 +4,12 @@ JSONスキーマに基づく設定データ読み込み機能
 
 import json
 import os
-from typing import Any, Self, cast
+from abc import ABC, abstractmethod
+from pathlib import Path
+from typing import Any, Literal, Self, Union, cast
 
 import yaml
+from fastmcp import FastMCP
 from pydantic import BaseModel, Field, field_validator, model_validator
 from pydantic import ValidationError as PydanticValidationError
 
@@ -36,22 +39,29 @@ class ConfigParser:
         if not os.path.exists(file_path):
             # FileNotFoundError の代わりに ConfigLoadError を送出
             raise ConfigLoadError(f"設定ファイルが見つかりません: {file_path}")
+        yaml_extentions = [".yaml", ".yml"]
+        json_extentions = [".json"]
+        supported_extensions = yaml_extentions + json_extentions
+        if not any(file_path.endswith(ext) for ext in supported_extensions):
+            raise ConfigLoadError(f"サポートされていないファイル形式です: {file_path}")
 
         try:
             with open(file_path, encoding="utf-8") as f:
-                if file_path.endswith(".yaml") or file_path.endswith(".yml"):
+                ext = os.path.splitext(file_path)[1].lower()
+                if ext in yaml_extentions:
                     # yaml.safe_load は Any を返すため、cast と ignore を使用
                     return cast(dict[str, Any], yaml.safe_load(f))
-                elif file_path.endswith(".json"):
+                if ext in json_extentions:
                     # json.load は Any を返すため、cast と ignore を使用
                     return cast(dict[str, Any], json.load(f))
-                else:
-                    # ValueError の代わりに ConfigLoadError を送出
-                    raise ConfigLoadError(f"サポートされていないファイル形式です: {file_path}")
-        except (yaml.YAMLError, json.JSONDecodeError) as e:
-            raise ConfigLoadError(f"設定ファイルのパースに失敗しました: {file_path} - {e}")
+
+        except (yaml.YAMLError, json.JSONDecodeError) as e:  # yaml.parser.ParserError は yaml.YAMLError に含まれる
+            print(f"DEBUG: Caught exception type: {type(e)}")  # デバッグ出力追加
+            print(f"DEBUG: Exception message: {e}")  # デバッグ出力追加
+            raise ConfigLoadError(f"設定ファイルのパースに失敗しました: {file_path}") from e
         except Exception as e:  # その他の予期せぬ読み込みエラー
-            raise ConfigLoadError(f"設定ファイルの読み込み中に予期せぬエラーが発生しました: {file_path} - {e}")
+            print(e)
+            raise ConfigLoadError(f"設定ファイルの読み込み中に予期せぬエラーが発生しました: {file_path}") from e
 
 
 # SchemaValidator クラスは削除 (JSONスキーマ検証は Pydantic に一本化)
@@ -128,7 +138,7 @@ class ConfigModel(BaseModel):
     """設定ファイルのモデル"""
 
     fields: dict[str, str]
-    rules: list[Rule]
+    rules: list[Rule] = []
     output: OutputFormat = Field(default_factory=OutputFormat)
 
     @field_validator("fields")
@@ -197,9 +207,158 @@ class ConfigLoader:
             raise ConfigValidationError(f"設定ファイルのモデル検証に失敗しました: {error_details}") from e
         except Exception as e:
             # その他の予期せぬエラー
-            raise XlsxValuePickerError(f"設定ファイルの処理中に予期せぬエラーが発生しました: {e}") from e
+            raise ConfigValidationError(
+                f"設定ファイルの読み込み時に予期しないエラーが発生しました: {config_path}"
+            ) from e
+
+    def load_mcp_config(self, config_path: str) -> "MCPConfig":
+        """
+        MCP設定ファイルを読み込み、MCPConfigモデルオブジェクトを返す
+
+        Args:
+            config_path: MCP設定ファイルのパス
+
+        Returns:
+            MCPConfig: MCP設定モデルオブジェクト
+
+        Raises:
+            ConfigLoadError: 設定ファイルの読み込みやパースに失敗した場合
+            ConfigValidationError: 設定ファイルのモデル検証に失敗した場合
+        """
+        try:
+            # 設定ファイルのパース
+            config_data = ConfigParser.parse_file(config_path)
+
+            # MCPConfigモデルオブジェクトの生成
+            mcp_config = MCPConfig.model_validate(config_data)
+            mcp_config.origin = Path(config_path).absolute()
+            return mcp_config
+
+        except ConfigLoadError as e:
+            raise e
+        except PydanticValidationError as e:
+            error_details = "; ".join([f"{err['loc']}: {err['msg']}" for err in e.errors()])
+            raise ConfigValidationError(f"MCP設定ファイルのモデル検証に失敗しました: {error_details}") from e
+        except Exception as e:
+            raise XlsxValuePickerError(f"MCP設定ファイルの処理中に予期せぬエラーが発生しました: {e}") from e
 
 
 # Pydanticモデルの循環参照を解決するために再構築
 Rule.model_rebuild()
 ConfigModel.model_rebuild()
+
+"""
+MCPサーバー設定関連クラス
+"""
+
+
+class MCPAvailableConfigModel(ConfigModel):
+    """MCPサーバ設定用に追加項目を付与して拡張したモデル"""
+
+    model_name: str | None = None
+    model_description: str | None = None
+
+
+type ToolNames = Literal["listModels", "getModelInfo", "getDiagnostics", "getFileContent"]
+
+
+class MCPConfig(BaseModel):
+    models: list[Union["ModelConfigReference", "GlobModelConfigReference"]]
+    config: "MCPConfigDetails"
+    origin: Path | None = None
+    # 以降内部用フィールド
+    loaded_models: list[MCPAvailableConfigModel] = Field(default=[], exclude=True)
+
+    def cache_models(self):
+        """モデル一覧をパースしてモデル設定をキャッシュする"""
+        # モデル設定をロード
+        self.loaded_models: list[MCPAvailableConfigModel] = [
+            model for definition in self.models for model in definition.get_models(self)
+        ]
+
+    def handle_list_models(self) -> str:
+        """モデル情報を取得するためのハンドラー"""
+        # モデル情報を取得
+        simplified_models = [
+            f"Model Name: {model.model_name}. Description: {model.model_description}" for model in self.loaded_models
+        ]
+        return "\n".join(simplified_models)
+
+    def configure(self) -> FastMCP:
+        """設定内容に基づいてFastMCPサーバのインスタンスを構築して返す"""
+        self.cache_models()
+
+        # FastMCP サーバーを構築
+        server = FastMCP()
+
+        # ハンドラーを登録
+        server.add_tool(
+            name="listModels",
+            fn=self.handle_list_models,
+            description="""
+supply summarized list of parsable Excel file informations with `getFileContent` tool.
+
+""",
+        )
+        # server.add_tool(
+        #     name="getModelInfo",
+        #     fn=self.handle_get_model_info,
+        #     description="get detailed information about specified Excel file ",
+        # )
+        # server.add_tool(name="getDiagnostics", fn=self.handle_get_diagnostics)
+        # server.add_tool(name="getFileContent", fn=self.handle_get_file_content)
+
+        return server
+
+
+class IModelReferences(ABC):
+    """モデル設定を表すインターフェース"""
+
+    @abstractmethod
+    def get_models(self, context: MCPConfig) -> list[MCPAvailableConfigModel]:
+        """モデル設定を取得する"""
+        raise NotImplementedError("get_models メソッドは実装されていません")
+
+
+class ModelConfigReference(BaseModel, IModelReferences):
+    config_path: str = Field(..., alias="config")
+    model_name: str | None = None
+    model_description: str | None = None
+
+    def get_models(self, context: MCPConfig) -> list[MCPAvailableConfigModel]:
+        """モデル設定を取得する"""
+        path = Path(self.config_path)
+        # パス表記が絶対パスでない場合はMCP設定ファイルの親フォルダからの相対パスとして解釈する
+        if not path.is_absolute():
+            path = context.origin.parent / path
+        # 設定ファイルを読み込む
+        config = ConfigParser.parse_file(str(path))
+
+        # モデル名と説明をMCP設定ファイルの内容で上書き
+        if self.model_name:
+            config["model_name"] = self.model_name
+        if self.model_description:
+            config["model_description"] = self.model_description
+
+        return [MCPAvailableConfigModel.model_validate(config)]
+
+
+class GlobModelConfigReference(BaseModel, IModelReferences):
+    config_path_pattern: str
+
+    def get_models(self, context: MCPConfig) -> list[MCPAvailableConfigModel]:
+        """モデル設定を取得する"""
+        # glob パターンを展開してモデル設定を取得
+        # import glob
+
+        # models = []
+        # for path in glob.glob(self.config_path_pattern):
+        #     model_ref = ModelConfigReference(config_path=path)
+        #     models.extend(model_ref.get_models())
+
+        # return models
+        raise NotImplementedError("メソッドは実装されていません")
+
+
+class MCPConfigDetails(BaseModel):
+    tool_descriptions: dict[ToolNames, str]

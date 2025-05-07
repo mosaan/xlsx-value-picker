@@ -1,0 +1,10 @@
+models:
+  - model_name: valid_model
+    config: ./valid_model_config.yaml
+    description: "A valid model configuration for testing"
+config:
+  tool_descriptions:
+    listModels: "List available models"
+    getModelInfo: "Get model information"
+    getDiagnostics: "Get validation results"
+    getFileContent: "Get structured text from Excel file"

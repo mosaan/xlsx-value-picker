@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "click>=8.1.8",
+    "fastmcp>=2.2.5",
     "jinja2>=3.1.6",
     "jsonschema>=4.23.0",
     "openpyxl>=3.1.5",
@@ -23,7 +24,7 @@ classifiers = [
 ]
 
 [project.scripts]
-xlsx-value-picker = "xlsx_value_picker.cli:main"
+xlsx-value-picker = "xlsx_value_picker.cli:cli"
 
 [tool.ruff]
 # 1行の最大文字数
@@ -42,7 +43,7 @@ select = [
 ]
 # 除外するエラーの種類
 ignore = [
-    "B904", # raise ... from ... になっていない場合のエラーを無視
+    #"B904", # raise ... from ... になっていない場合のエラーを無視
 ]
 
 # ファイルごとのエラー除外
@@ -74,7 +75,9 @@ build-backend = "setuptools.build_meta"
 
 [dependency-groups]
 dev = [
+    "anyio[trio]>=4.9.0",
     "mypy>=1.15.0",
+    "pip-licenses>=5.0.0",
     "pytest>=8.3.5",
     "ruff>=0.11.5",
     "types-openpyxl>=3.1.5.20250306",

@@ -1,0 +1,18 @@
+fields:
+  name: Sheet1!A1
+  age: Sheet1!B1
+rules:
+  - name: name_required
+    expression:
+      required:
+        field: name
+    error_message: "Name is required"
+  - name: age_is_number
+    expression:
+      compare:
+        field: age
+        operator: ">="
+        value: 0
+    error_message: "Age must be a non-negative number"
+output:
+  format: json

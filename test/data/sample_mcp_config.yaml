@@ -1,0 +1,13 @@
+models:
+  - model_name: sample_model
+    config: ./valid_model_config.yaml
+    description: "Sample model for testing MCP server"
+  - model_name: csv_model
+    config: ./csv_model_config.yaml
+    description: "CSV output model for testing MCP server"
+config:
+  tool_descriptions:
+    listModels: "リストアップ可能なExcelファイル処理モデルの一覧を表示します"
+    getModelInfo: "指定されたモデルの詳細情報を取得します"
+    getDiagnostics: "モデルに関連するバリデーション結果を取得します"
+    getFileContent: "指定されたモデルに基づいてExcelファイルから構造化テキストを生成します"

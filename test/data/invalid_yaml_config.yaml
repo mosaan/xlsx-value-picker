@@ -1,0 +1,13 @@
+models:
+  - model_name: invalid_yaml
+    config: ./invalid_yaml_config.yaml
+    description: "An invalid YAML configuration for testing"
+  - model_name: missing_end_bracket
+    config: ./missing_end_bracket.yaml
+    description: "Missing end bracket example
+config:
+  tool_descriptions:
+    listModels: "List available models"
+    getModelInfo: "Get model information"
+    getDiagnostics: "Get validation results"
+    getFileContent: "Get structured text from Excel file"

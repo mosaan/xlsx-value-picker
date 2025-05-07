@@ -12,9 +12,6 @@ import openpyxl
 import pytest
 import yaml
 
-# テスト対象モジュールへのパスを追加
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
-
 
 def create_test_excel(path):
     """テスト用のExcelファイルを作成する"""

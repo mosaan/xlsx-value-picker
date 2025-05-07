@@ -1,0 +1,6 @@
+fields:
+  value1: Sheet1!B2
+  value2: Sheet1!B3
+  value3: Sheet1!B4
+output:
+  format: yaml

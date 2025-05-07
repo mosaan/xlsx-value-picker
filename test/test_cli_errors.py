@@ -12,9 +12,6 @@ import openpyxl
 import pytest
 import yaml
 
-# テスト対象モジュールへのパスを追加
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
-
 
 def create_test_excel(path):
     """テスト用のExcelファイルを作成する"""
@@ -241,8 +238,11 @@ class TestCLIErrors:
         env = os.environ.copy()
         env["PYTHONPATH"] = str(Path(__file__).parent.parent)
 
+        # runサブコマンドを追加
+        run_args = ["run"] + args
+
         return subprocess.run(
-            [sys.executable, "-m", "xlsx_value_picker.cli"] + args,
+            [sys.executable, "-m", "xlsx_value_picker.cli"] + run_args,
             cwd=cwd,
             capture_output=True,
             encoding="utf-8",

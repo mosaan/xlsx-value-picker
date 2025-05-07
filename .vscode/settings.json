@@ -1,7 +1,9 @@
 {
     "python.testing.pytestArgs": [
-        "test"
+        "test",
+        "-s"
     ],
     "python.testing.unittestEnabled": false,
-    "python.testing.pytestEnabled": true
+    "python.testing.pytestEnabled": true,
+    "python.testing.pytestPath": "uv run pytest"
 }

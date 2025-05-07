@@ -3,14 +3,9 @@
 """
 
 import json
-import sys
-from pathlib import Path
 
 import pytest
 import yaml
-
-# テスト対象モジュールへのパスを追加
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from xlsx_value_picker.config_loader import ConfigModel, OutputFormat
 from xlsx_value_picker.output_formatter import OutputFormatter

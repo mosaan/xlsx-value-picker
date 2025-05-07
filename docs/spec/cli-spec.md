@@ -2,63 +2,141 @@
 
 ## コマンド構造
 
-### 基本コマンド
+`xlsx-value-picker` は複数のサブコマンドを持つグループコマンドとして実装されています。
+
 ```
-excel-validator [オプション] <入力ファイル>
+xlsx-value-picker [グローバルオプション] <サブコマンド> [サブコマンドオプション]
 ```
 
-### オプション
+### グローバルオプション
+- `-v`, `--version`: ツールのバージョンを表示します。
+- `-h`, `--help`: ヘルプ情報を表示します。
 
-#### 入力オプション
-- `-c`, `--config <設定ファイル>`: 検証ルールや設定を記述した設定ファイル（YAML形式）を指定します。
+### サブコマンド
 
-#### 検証オプション
+#### `run` - Excelファイル処理（値取得・バリデーション・出力）
+
+##### 基本構文
+```
+xlsx-value-picker run [オプション] <入力ファイル>
+```
+
+##### オプション
+
+###### 入力オプション
+- `-c`, `--config <設定ファイル>`: 検証ルールや設定を記述した設定ファイル（YAML形式）を指定します。デフォルトは `config.yaml` です。
+
+###### 検証オプション
 - `--ignore-errors`: 検証エラーが発生しても処理を継続します。
 - `--validate-only`: バリデーションのみを実行し、値の抽出や出力は行いません。
 
-#### 出力オプション
-- `-o`, `--output <出力ファイル>`: JSONデータの出力先ファイルを指定します。
+###### 出力オプション
+- `-o`, `--output <出力ファイル>`: データの出力先ファイルを指定します。未指定の場合は標準出力に出力します。
 - `--log <ログファイル>`: 検証エラーを記録するログファイルを指定します。
-- `--format <フォーマット>`: 出力フォーマットを指定します（`json`, `yaml`）。デフォルトは`json`です。
-- `--template <Jinja2テンプレートファイル>`: Jinja2テンプレートを使用して出力をカスタマイズします。`--template`オプションを指定した場合、`--format`オプションは無視されます。
+- `--include-empty-cells`: 空セルも出力に含めます。デフォルトでは空セルは出力から除外されます。
 
-#### ヘルプとバージョン
-- `-h`, `--help`: ヘルプ情報を表示します。
-- `-v`, `--version`: ツールのバージョンを表示します。
+#### `server` - MCPサーバー機能
+
+MCPサーバー機能は、Model Context Protocol (MCP) に準拠したサーバーとして動作し、標準入出力を介して外部のMCPクライアント（VS Code拡張機能など）と通信します。
+
+##### 基本構文
+```
+xlsx-value-picker server [オプション]
+```
+
+##### オプション
+- `-c`, `--config <設定ファイル>`: MCPサーバー設定ファイル（YAML形式）を指定します。デフォルトは `mcp.yaml` です。
+- `--log-level <レベル>`: ログレベルを設定します。指定可能な値は `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL` です。デフォルトは `INFO` です。
 
 ## 使用例
 
-### デフォルト設定でExcelファイルを検証
+### デフォルト設定でExcelファイルを処理
 ```
-excel-validator input.xlsx
+xlsx-value-picker run input.xlsx
 ```
 
 ### 特定の設定ファイルを使用して検証
 ```
-excel-validator -c rules.yaml input.xlsx
+xlsx-value-picker run -c rules.yaml input.xlsx
 ```
 
 ### 検証結果をJSONファイルに出力
 ```
-excel-validator -o results.json input.xlsx
-```
-
-### Jinja2テンプレートを使用して出力
-```
-excel-validator --template template.j2 input.xlsx
+xlsx-value-picker run -o results.json input.xlsx
 ```
 
 ### バリデーションのみを実行
 ```
-excel-validator --validate-only input.xlsx
+xlsx-value-picker run --validate-only input.xlsx
 ```
 
 ### バリデーションエラーを無視して処理を継続
 ```
-excel-validator --ignore-errors input.xlsx
+xlsx-value-picker run --ignore-errors input.xlsx
 ```
 
 ### バリデーション結果をログファイルに出力
 ```
-excel-validator --log validation.log input.xlsx
+xlsx-value-picker run --log validation.log input.xlsx
 ```
+
+### MCPサーバーを起動
+```
+xlsx-value-picker server
+```
+
+### カスタム設定ファイルとログレベルでMCPサーバーを起動
+```
+xlsx-value-picker server -c custom_mcp_config.yaml --log-level DEBUG
+```
+
+## 設定ファイル
+
+### run コマンド用の設定ファイル
+run コマンドでは、以下のような構造のYAML/JSONファイルを設定ファイルとして使用します。
+
+```yaml
+# 取得フィールド定義
+fields:
+  field_name1: "Sheet1!A1"
+  field_name2: "Sheet1!B2:C3"
+  field_name3: "Sheet2!D4"
+
+# バリデーションルール
+rules:
+  - name: "数値範囲チェック"
+    expression:
+      compare:
+        left_field: "field_name1"
+        operator: ">="
+        right: 10
+    error_message: "{field}は10以上である必要があります（現在: {left_value}）"
+
+# 出力設定
+output:
+  format: "json"  # json, yaml, csv が指定可能
+```
+
+### server コマンド用の設定ファイル
+server コマンドでは、以下のような構造のYAML/JSONファイルを設定ファイルとして使用します。
+
+```yaml
+# 利用可能なモデル定義
+models:
+  - model_name: "model1"
+    config: "./model1_config.yaml"
+    description: "Model 1 description"
+  - model_name: "model2"
+    config: "./model2_config.yaml"
+    description: "Model 2 description"
+
+# MCPサーバー全体の設定
+config:
+  tool_descriptions:
+    listModels: "利用可能なExcelファイル処理モデルの一覧を取得します"
+    getModelInfo: "特定のモデルの詳細情報を取得します"
+    getDiagnostics: "モデルのバリデーション結果を取得します"
+    getFileContent: "Excelファイルの内容を構造化テキストで取得します"
+```
+
+モデル設定ファイル（例: model1_config.yaml）は、run コマンドと同様の構造を持ちます。

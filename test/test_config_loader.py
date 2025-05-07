@@ -3,24 +3,21 @@
 """
 
 import json
-import sys
-from pathlib import Path
 
 import pytest
 import yaml
-from pydantic import ValidationError as PydanticValidationError  # PydanticValidationError をインポート
-
-# テスト対象モジュールへのパスを追加
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+from pydantic import ValidationError as PydanticValidationError
 
 from xlsx_value_picker.config_loader import (
     ConfigLoader,
+    ConfigLoadError,
     ConfigModel,
     ConfigParser,
+    ConfigValidationError,
+    MCPConfig,
     OutputFormat,
     Rule,
 )
-from xlsx_value_picker.exceptions import ConfigLoadError, ConfigValidationError
 from xlsx_value_picker.validator.validation_expressions import RequiredExpression
 
 
@@ -90,9 +87,20 @@ class TestConfigParser:
         """不正なYAMLファイルを読み込もうとするとConfigLoadErrorが発生することをテスト"""
         invalid_yaml_path = tmp_path / "invalid.yaml"
         create_invalid_yaml(invalid_yaml_path)
-        with pytest.raises(ConfigLoadError) as excinfo:
+        # pytest.raises の代わりに try...except を使用
+        try:
             ConfigParser.parse_file(str(invalid_yaml_path))
-        assert "設定ファイルのパースに失敗しました" in str(excinfo.value)
+            # 例外が発生しなかった場合はテスト失敗
+            pytest.fail("ConfigLoadError was not raised")
+        except Exception as e:
+            # 捕捉した例外の型とメッセージをデバッグ出力
+            print(f"DEBUG: Caught exception in test: type={type(e)}, msg='{e}'")
+            # 捕捉した例外が ConfigLoadError のインスタンスか確認
+            from xlsx_value_picker.exceptions import ConfigLoadError as ExpectedError
+
+            assert isinstance(e, ExpectedError)
+            # 必要であればメッセージの内容も確認
+            assert "設定ファイルのパースに失敗しました" in str(e)
 
     def test_parse_invalid_json(self, tmp_path):
         """不正なJSONファイルを読み込もうとするとConfigLoadErrorが発生することをテスト"""
@@ -259,3 +267,29 @@ class TestConfigLoader:
             loader.load_config(str(config_path))
         assert "設定ファイルのモデル検証に失敗しました" in str(excinfo.value)
         assert "Value error, 少なくとも1つのフィールド定義が必要です" in str(excinfo.value)
+
+
+def test_load_mcp_config_valid():
+    """有効なMCP設定ファイルを正しく読み込むことをテスト"""
+    loader = ConfigLoader()
+    config_path = "test/data/valid_mcp_config.yaml"
+    mcp_config = loader.load_mcp_config(config_path)
+    assert isinstance(mcp_config, MCPConfig)
+    assert len(mcp_config.models) > 0
+    assert "listModels" in mcp_config.config.tool_descriptions
+
+
+def test_load_mcp_config_invalid_format():
+    """無効な形式のMCP設定ファイルを処理する際のエラーをテスト"""
+    loader = ConfigLoader()
+    config_path = "test/data/invalid_format_mcp_config.yaml"
+    with pytest.raises(ConfigValidationError):
+        loader.load_mcp_config(config_path)
+
+
+def test_load_mcp_config_missing_file():
+    """存在しないMCP設定ファイルを処理する際のエラーをテスト"""
+    loader = ConfigLoader()
+    config_path = "test/data/non_existent_config.yaml"
+    with pytest.raises(ConfigLoadError):
+        loader.load_mcp_config(config_path)

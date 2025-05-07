@@ -13,6 +13,5 @@ wheels/
 tmp
 .pytest_cache/
 *.xlsx
-*.yaml
 .env
 **/.claude/settings.local.json
