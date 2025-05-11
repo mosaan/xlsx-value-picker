@@ -14,8 +14,10 @@
 # Pythonパッケージマネージャー「uv」の使用方法
 
 ## 基本情報
-- uvはRustで実装された高速なPythonパッケージ・プロジェクト管理ツールです
-- 従来のpip、pip-tools、pipx、poetry、pyenv、virtualenvなどの代替として機能します
+- uvはRustで実装された高速なPythonパッケージ・プロジェクト管理ツールです。
+  このワークスペースのプロジェクトはuvを使用して管理されています。
+- 従来のpip、pip-tools、pipx、poetry、pyenv、virtualenvなどの代替として機能します。
+  換言すれば、本プロジェクトではこれらのツールを使用せず、uvを中心に開発を行います。
 - 公式ドキュメント: https://docs.astral.sh/uv/
 - GitHub: https://github.com/astral-sh/uv
 
